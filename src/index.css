@@ -146,7 +146,9 @@
   --sidebar-border: oklch(0.33 0.02 250);
   --sidebar-ring: oklch(0.68 0.16 255);
 }
-
+.font-heading {
+  font-family: "Space Grotesk", sans-serif;
+}
 /* ----------------------------------------------------------- */
 
 @layer base {
