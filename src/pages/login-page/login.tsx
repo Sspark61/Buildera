@@ -71,7 +71,7 @@ export default function Login() {
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                 </div>
-                                <button type="submit" disabled={isSubmitting} className='border w-full rounded-md py-2 text-sm text-bold bg-(--primary) hover:bg-[#395cae] cursor-pointer transition-all'>
+                                <button type="submit" disabled={isSubmitting} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
                                     Log in
                                 </button>
                                 <div className="flex items-center gap-4 w-full">
