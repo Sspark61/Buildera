@@ -4,7 +4,7 @@ import { Mail, Lock, Eye } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
-export default function login() {
+export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
