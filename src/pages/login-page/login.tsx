@@ -23,7 +23,7 @@ export default function Login() {
                     <Formik
                         initialValues={{ email: '', password: '' }}
                         validate={values => {
-                            const errors = {};
+                            const errors = { email: '', password: '' };
                             if (!values.email) {
                                 errors.email = '*This field is required';
                             } else if (
@@ -53,7 +53,7 @@ export default function Login() {
                                             type="email"
                                             name="email"
                                             placeholder="Email address"
-                                            className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm"
+                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
                                         />
                                     </div>
 
@@ -66,7 +66,7 @@ export default function Login() {
                                 <div>
                                     <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
                                         <Lock size={18} strokeWidth={1.5} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
+                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
@@ -85,7 +85,7 @@ export default function Login() {
                                     <FcGoogle size={16} />
                                     <span className='ps-2 text-sm'>Google</span>
                                 </button>
-                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <a href="/signup" className="text-blue-500 hover:underline">Sign up</a></p>
+                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <a href="/signup" className="text-(--ring) hover:underline">Sign up</a></p>
                             </Form>
                         )}
                     </Formik>
