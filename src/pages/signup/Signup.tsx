@@ -21,9 +21,9 @@ export default function Signup() {
                 <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
                 <div>
                     <Formik
-                        initialValues={{ fullname: '', email: '', password: '' }}
+                        initialValues={{ fullname: '', email: '', password: '', confirmPassword: '' }}
                         validate={values => {
-                            const errors = { fullname: '', email: '', password: '' };
+                            const errors = {};
                             if (!values.fullname) {
                                 errors.fullname = '*This field is required';
                             }
@@ -36,6 +36,9 @@ export default function Signup() {
                             }
                             if (!values.password) {
                                 errors.password = '*This field is required';
+                            }
+                            if (values.confirmPassword && values.password !== values.confirmPassword) {
+                                errors.confirmPassword = "*Password doesn't match"
                             }
                             return errors;
                         }}
@@ -56,7 +59,7 @@ export default function Signup() {
                                             type="text"
                                             name="fullname"
                                             placeholder="Full name"
-                                            className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm"
+                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
                                         />
                                     </div>
 
@@ -74,7 +77,7 @@ export default function Signup() {
                                             type="email"
                                             name="email"
                                             placeholder="Email address"
-                                            className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm"
+                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
                                         />
                                     </div>
 
@@ -92,6 +95,14 @@ export default function Signup() {
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                 </div>
+                                <div>
+                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                        <Lock size={16} strokeWidth={2} color="gray" />
+                                        <Field id="show" type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
+                                        <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                    </div>
+                                    <ErrorMessage name="confirmPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                </div>
                                 <button type="submit" disabled={isSubmitting} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
                                     Create Account
                                 </button>
@@ -106,7 +117,7 @@ export default function Signup() {
                                     <FcGoogle size={16} />
                                     <span className='ps-2 text-sm'>Google</span>
                                 </button>
-                                <p className='text-xs text-(--muted-foreground)'>Already have an account?  <a href="/login" className="text-blue-500 hover:underline">Log in</a></p>
+                                <p className='text-xs text-(--muted-foreground)'>Already have an account?  <a href="/login" className="text-(--ring) hover:underline">Log in</a></p>
                             </Form>
                         )}
                     </Formik>

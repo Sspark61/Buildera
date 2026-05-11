@@ -23,7 +23,7 @@ export default function Login() {
                     <Formik
                         initialValues={{ email: '', password: '' }}
                         validate={values => {
-                            const errors = { email: '', password: '' };
+                            const errors = {};
                             if (!values.email) {
                                 errors.email = '*This field is required';
                             } else if (
