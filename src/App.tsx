@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import AppLayout from "@/components/layout/layout.tsx";
 import Login from "./pages/login-page/login.tsx";
 import Signup from "./pages/signup/Signup.tsx";
 
@@ -15,8 +16,13 @@ const queryClient = new QueryClient({
 });
 
 const router = createBrowserRouter([
-  { path: "/login",             element: <Login /> },
-  { path: "/signup",            element: <Signup /> }
+  {
+    element: <AppLayout><Outlet /></AppLayout>,
+    children: [
+    ],
+  },
+  { path: "/login",  element: <Login /> },
+  { path: "/signup", element: <Signup /> },
 ]);
 
 const App = () => (
