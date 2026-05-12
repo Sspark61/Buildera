@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Login from "./pages/login-page/login.tsx";
 import Signup from "./pages/signup/Signup.tsx";
 
- 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -14,12 +13,12 @@ const queryClient = new QueryClient({
     },
   },
 });
- 
+
 const router = createBrowserRouter([
   { path: "/login",             element: <Login /> },
   { path: "/signup",            element: <Signup /> }
 ]);
- 
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -28,5 +27,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
- 
+
 export default App;
