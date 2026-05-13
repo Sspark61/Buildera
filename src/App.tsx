@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/layout.tsx";
 import Login from "./pages/login-page/login.tsx";
 import Signup from "./pages/signup/Signup.tsx";
+import Landing from "./pages/landing/landing.tsx"
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
   {
     element: <AppLayout><Outlet /></AppLayout>,
     children: [
+      {path: "/", element: <Landing />},
     ],
   },
   { path: "/login",  element: <Login /> },
