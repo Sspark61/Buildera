@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, ShoppingBag, Bookmark, Settings, LogIn, User, Wrench } from "lucide-react";
 import builderaLogo from "@/assets/buildera-new-logo.png";
+import smallLogo from "@/assets/buildera-new-logo-small.png";
 import {
     Sidebar,
     SidebarContent,
@@ -40,14 +41,22 @@ export function AppSidebar() {
                     to="/"
                     className={`flex items-center gap-2.5 py-2 ${collapsed ? "justify-center px-0" : "px-2"}`}
                 >
-                <img
+                {!collapsed && (
+                    <img
                     src={builderaLogo}
                     alt="Buildera logo"
-                    className={`${collapsed ? "w-7 h-7" : "w-8 h-8"} rounded-lg shrink-0 object-contain`}
-                />
-                {!collapsed && (
-                    <span className="text-lg font-heading font-bold text-foreground tracking-tight">Buildera</span>
+                    className={`${collapsed ? "w-7 h-7" : "w-50 h-8"} rounded-lg shrink-0 object-contain`}
+                    />
                 )}
+                {collapsed && (
+                    <img
+                    src={smallLogo}
+                    alt="Buildera logo"
+                    className={`${collapsed ? "w-7 h-7" : "w-50 h-8"} rounded-lg shrink-0 object-contain`}
+                    />
+                )}
+                
+                
                 </Link>
             </SidebarHeader>
 
