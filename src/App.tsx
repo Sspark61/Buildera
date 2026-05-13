@@ -6,6 +6,7 @@ import AppLayout from "@/components/layout/layout.tsx";
 import Login from "./pages/login-page/login.tsx";
 import Signup from "./pages/signup/Signup.tsx";
 import Landing from "./pages/landing/landing.tsx"
+import NotFound from "./pages/error404/404.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
   },
   { path: "/login",  element: <Login /> },
   { path: "/signup", element: <Signup /> },
+  { path: "*",       element: <NotFound/>}
 ]);
 
 const App = () => (
