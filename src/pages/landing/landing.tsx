@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import heroPc from "@/assets/images/hero-pc.jpg";
 import pcBuild1 from "@/assets/images/pc-build-1.jpg";
 import pcBuild2 from "@/assets/images/pc-build-2.jpg";
 import pcBuild3 from "@/assets/images/pc-build-3.jpg";
@@ -89,7 +88,6 @@ const landing = () => {
             className="relative rounded-2xl overflow-hidden border border-border"
             >
                 <div className="absolute inset-0">
-                    <img src={heroPc} alt="Custom gaming PC build" className="w-full h-full object-cover opacity-25" />
                     <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/60" />
                 </div>
                 <div className="relative z-10 p-8 lg:p-14 max-w-2xl">
