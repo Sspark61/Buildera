@@ -9,6 +9,7 @@ import Landing from "./pages/landing/landing.tsx"
 import NotFound from "./pages/error404/404.tsx";
 import Settings from "./pages/Settings/Settings.tsx";
 import Marketplace from "./pages/marketplace/marketplace.tsx";
+import ProductDetail from "./pages/product-details/productDetails.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: "/", element: <Landing /> },
       { path: "/settings", element: <Settings /> },
       { path: "/marketplace", element: <Marketplace /> },
+      { path: "/marketplace/:slug", element: <ProductDetail />},
     ],
   },
   { path: "/login", element: <Login /> },
