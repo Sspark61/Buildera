@@ -7,9 +7,10 @@ import {
     FieldTitle,
 } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/use-theme";
 export default function Settings() {
+    const { theme, setTheme } = useTheme();
     return (
         <div className="p-4 lg:p-8 space-y-6 max-w-3xl">
             <h1 className="font-heading text-2xl lg:text-3xl text-foreground text-bold mb-1">Settings</h1>
@@ -106,8 +107,8 @@ export default function Settings() {
                                     <FieldTitle>Theme</FieldTitle>
                                 </FieldContent>
                                 <div className="flex gap-2">
-                                    <button className='w-8 h-8 rounded-lg bg-backgroud border-2 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 cursor-pointer' title='Dark'></button>
-                                    <button className="w-8 h-8 rounded-lg bg-foreground border-2 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30 cursor-pointer" title="Light"></button>
+                                    <button onClick={() => setTheme("dark")} className={`w-8 h-8 rounded-lg bg-black ${theme === "dark" ? "border-primary ring-2 ring-primary/30" : "border-border"} cursor-pointer`} title='Dark'></button>
+                                    <button onClick={() => setTheme("light")} className={`w-8 h-8 rounded-lg bg-white ${theme === "light" ? "border-primary ring-2 ring-primary/30" : "border-border"} cursor-pointer`} title="Light"></button>
                                 </div>
                             </Field>
                         </FieldLabel>
@@ -123,16 +124,16 @@ export default function Settings() {
                     </div>
                     <Button size="sm" variant="destructive" className="cursor-pointer text-destructive font-heading bg-background hover:text-accent-foreground border-destructive/30">
                         <LogOut className="w-4 h-4" />
-                        <span className='hidden sm:block'> Log Out</span>
+                        <a href='' className='hidden sm:block'> Log Out</a>
                     </Button>
                 </div>
             </div>
             {/* Save */}
 
-            <Button size="lg" variant="outline" className="cursor-pointer bg-(--ring)/90 hover:bg-(--hover-blue) font-heading w-full">
+            <Button size="lg" variant="outline" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:text-primary-foreground! disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 px-4 py-2 gradient-primary neon-glow text-primary-foreground font-semibold w-full ">
                 <span className=''>Save Changes</span>
             </Button>
 
-        </div>
+        </div >
     )
 }
