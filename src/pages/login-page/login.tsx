@@ -4,6 +4,7 @@ import { Mail, Lock, Eye } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -16,7 +17,7 @@ export default function Login() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <a href="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2' src="/src/assets/images/buildera-new-logo.png" alt="" /></a>
+                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2' src="/src/assets/images/buildera-new-logo.png" alt="" /></Link>
                 <h3 className='text-xl font-heading'>Welcome back</h3>
                 <p className='text-sm text-(--muted-foreground) pb-4'>Log in to your account</p>
                 <div>
@@ -85,7 +86,7 @@ export default function Login() {
                                     <FcGoogle size={16} />
                                     <span className='ps-2 text-sm'>Google</span>
                                 </button>
-                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <a href="/signup" className="text-(--ring) hover:underline">Sign up</a></p>
+                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <Link to="/signup" className="text-(--ring) hover:underline">Sign up</Link></p>
                             </Form>
                         )}
                     </Formik>
