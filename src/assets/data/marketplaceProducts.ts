@@ -1,8 +1,8 @@
-import gpuImg from "@/assets/gpu.jpg";
-import pcBuild1 from "@/assets/pc-build-1.jpg";
-import pcBuild2 from "@/assets/pc-build-2.jpg";
-import pcBuild3 from "@/assets/pc-build-3.jpg";
-import pcBuild4 from "@/assets/pc-build-4.jpg";
+import gpuImg from "@/assets/images/gpu.jpg";
+import pcBuild1 from "@/assets/images/pc-build-1.jpg";
+import pcBuild2 from "@/assets/images/pc-build-2.jpg";
+import pcBuild3 from "@/assets/images/pc-build-3.jpg";
+import pcBuild4 from "@/assets/images/pc-build-4.jpg";
 
 export interface MarketplaceProduct {
   slug: string;
