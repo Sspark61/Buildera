@@ -1,5 +1,5 @@
 
-import loginImg from '/src/assets/login.jpg'
+import loginImg from '/src/assets/images/login.jpg'
 import { Mail, Lock, Eye } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
@@ -16,7 +16,7 @@ export default function Login() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <a href="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2' src="/src/assets/buildera-new-logo.png" alt="" /></a>
+                <a href="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2' src="/src/assets/images/buildera-new-logo.png" alt="" /></a>
                 <h3 className='text-xl font-heading'>Welcome back</h3>
                 <p className='text-sm text-(--muted-foreground) pb-4'>Log in to your account</p>
                 <div>

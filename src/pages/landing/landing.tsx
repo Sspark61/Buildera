@@ -18,11 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import heroPc from "@/assets/hero-pc.jpg";
-import pcBuild1 from "@/assets/pc-build-1.jpg";
-import pcBuild2 from "@/assets/pc-build-2.jpg";
-import pcBuild3 from "@/assets/pc-build-3.jpg";
-import pcBuild4 from "@/assets/pc-build-4.jpg";
+import heroPc from "@/assets/images/hero-pc.jpg";
+import pcBuild1 from "@/assets/images/pc-build-1.jpg";
+import pcBuild2 from "@/assets/images/pc-build-2.jpg";
+import pcBuild3 from "@/assets/images/pc-build-3.jpg";
+import pcBuild4 from "@/assets/images/pc-build-4.jpg";
 
 const featuredBuilds = [
     { name: "Neon Vanguard X-1", price: "$2,499", category: "Gaming", img: pcBuild1 },

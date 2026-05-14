@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, ShoppingBag, Bookmark, Settings, LogIn, User, Wrench } from "lucide-react";
-import builderaLogo from "@/assets/buildera-new-logo.png";
-import smallLogo from "@/assets/buildera-new-logo-small.png";
+import builderaLogo from "@/assets/images/buildera-new-logo.png";
+import smallLogo from "@/assets/images/buildera-new-logo-small.png";
 import {
     Sidebar,
     SidebarContent,
