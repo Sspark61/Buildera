@@ -3,8 +3,8 @@ import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/layout/layout.tsx";
-import Login from "./pages/login-page/Login.tsx";
-import Signup from "./pages/Signup/Signup.tsx";
+import Login from "./pages/login-page/login.tsx";
+import Signup from "./pages/signup/Signup.tsx";
 import Landing from "./pages/landing/landing.tsx"
 import NotFound from "./pages/error404/404.tsx";
 import Settings from "./pages/Settings/Settings.tsx";
