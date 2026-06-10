@@ -13,7 +13,6 @@ export const api = async (endPoint: string , options: RequestInit = {}) => {
 
 if (res.status === 401) {
     localStorage.removeItem('token')
-    window.location.href = '/login'
     return
 }
 
