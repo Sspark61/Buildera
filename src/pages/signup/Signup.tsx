@@ -1,13 +1,16 @@
 
 import loginImg from '/src/assets/images/login.jpg'
+import builderaLogo from "@/assets/images/buildera-new-logo.png";
+import builderalight from "@/assets/images/buildera_logo_whitemode.png";
 import { Mail, Lock, Eye, User } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTheme } from "@/hooks/use-theme";
 export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
-
+    const { theme } = useTheme()
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
             <div className="hidden lg:block relative h-full bg-cover bg-center opacity-70" style={{ backgroundImage: `url(${loginImg})` }}>
@@ -17,7 +20,7 @@ export default function Signup() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2' src="/src/assets/images/buildera-new-logo.png" alt="" /></Link>
+                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
                 <h3 className='text-xl font-heading'>Create your account</h3>
                 <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
                 <div>
