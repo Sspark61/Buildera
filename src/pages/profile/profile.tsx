@@ -177,7 +177,7 @@ const Profile = () => {
                             {userBuilds.map((build, i) => (
                                 <motion.div key={build.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
                                     <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
-                                        <div className="aspect-square overflow-hidden bg-muted">
+                                        <div className="aspect-square overflow-hidden bg-muted -m-4">
                                             <img src={build.img} alt={build.name} loading="lazy" width={512} height={512}
                                                 className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                                         </div>
