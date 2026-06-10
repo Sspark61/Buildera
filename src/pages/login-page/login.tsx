@@ -91,12 +91,12 @@ export default function Login() {
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                     {loginError &&
-                                    (<p className='text-sm text-(--destructive) text-start'>
-                                        Invalid email or password
-                                    </p>
-                                    )}
+                                        (<p className='text-sm text-(--destructive) text-start'>
+                                            Invalid email or password
+                                        </p>
+                                        )}
                                 </div>
-                                
+
                                 <button
                                     type="submit"
                                     disabled={isSubmitting || isPending}
