@@ -7,10 +7,12 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTheme } from "@/hooks/use-theme";
+import { useRegister } from '../../hooks/useSignup';
+import { useNavigate } from 'react-router-dom';
 export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
-    const { theme } = useTheme()
+    const { mutate: signup, isPending } = useRegister()
+    const navigate = useNavigate()
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
             <div className="hidden lg:block relative h-full bg-cover bg-center opacity-70" style={{ backgroundImage: `url(${loginImg})` }}>
@@ -25,11 +27,11 @@ export default function Signup() {
                 <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
                 <div>
                     <Formik
-                        initialValues={{ fullname: '', email: '', password: '', confirmPassword: '' }}
+                        initialValues={{ userName: '', email: '', password: '', cPassword: '' }}
                         validate={values => {
                             const errors = {};
-                            if (!values.fullname) {
-                                errors.fullname = '*This field is required';
+                            if (!values.userName) {
+                                errors.userName = '*This field is required';
                             }
                             if (!values.email) {
                                 errors.email = '*This field is required';
@@ -41,16 +43,29 @@ export default function Signup() {
                             if (!values.password) {
                                 errors.password = '*This field is required';
                             }
-                            if (values.confirmPassword && values.password !== values.confirmPassword) {
-                                errors.confirmPassword = "*Password doesn't match"
+                            if (!values.cPassword) {
+                                errors.cPassword = '*This field is required';
+                            } else if (values.password !== values.cPassword) {
+                                errors.cPassword = "*Password doesn't match";
                             }
                             return errors;
                         }}
                         onSubmit={(values, { setSubmitting }) => {
-                            setTimeout(() => {
-                                alert(JSON.stringify(values, null, 2));
-                                setSubmitting(false);
-                            }, 400);
+                            signup(
+                                { email: values.email, userName: values.userName, password: values.password, cPassword: values.cPassword }
+                                ,
+                                {
+                                    onSuccess: () => {
+                                        navigate('/login');
+                                    },
+                                    onError: () => {
+                                        setSubmitting(false);
+                                    },
+                                    onSettled: () => {
+                                        setSubmitting(false);
+                                    }
+                                }
+                            )
                         }}
                     >
                         {({ isSubmitting }) => (
@@ -61,14 +76,14 @@ export default function Signup() {
 
                                         <Field
                                             type="text"
-                                            name="fullname"
+                                            name="userName"
                                             placeholder="Full name"
                                             className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
                                         />
                                     </div>
 
                                     <ErrorMessage
-                                        name="fullname"
+                                        name="userName"
                                         component="div"
                                         className='text-start text-(--destructive) text-sm mt-1'
                                     />
@@ -94,7 +109,7 @@ export default function Signup() {
                                 <div>
                                     <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
                                         <Lock size={16} strokeWidth={2} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
+                                        <Field id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
@@ -102,12 +117,12 @@ export default function Signup() {
                                 <div>
                                     <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
                                         <Lock size={16} strokeWidth={2} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
+                                        <Field id="cPassword" type={showPassword ? "text" : "password"} name="cPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
-                                    <ErrorMessage name="confirmPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                    <ErrorMessage name="cPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                 </div>
-                                <button type="submit" disabled={isSubmitting} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
+                                <button type="submit" disabled={isSubmitting || isPending} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
                                     Create Account
                                 </button>
                                 <div className="flex items-center gap-4 w-full">
