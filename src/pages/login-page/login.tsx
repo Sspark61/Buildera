@@ -5,8 +5,15 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useLogin } from '../../hooks/useLogin'
+import { useNavigate } from 'react-router-dom';
+
+
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
+    const [loginError, setLoginError] = useState('')
+    const { mutate: login, isPending } = useLogin()
+    const navigate = useNavigate()
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
@@ -24,6 +31,7 @@ export default function Login() {
                     <Formik
                         initialValues={{ email: '', password: '' }}
                         validate={values => {
+                            setLoginError('')
                             const errors: any = {};
                             if (!values.email) {
                                 errors.email = '*This field is required';
@@ -38,10 +46,21 @@ export default function Login() {
                             return errors;
                         }}
                         onSubmit={(values, { setSubmitting }) => {
-                            setTimeout(() => {
-                                alert(JSON.stringify(values, null, 2));
-                                setSubmitting(false);
-                            }, 400);
+                            login(
+                                { email: values.email, password: values.password },
+                                {
+                                    onSuccess: () => {
+                                        navigate('/')
+                                    },
+                                    onError: () => {
+                                        setLoginError('*Invalid email or password')
+                                        setSubmitting(false)
+                                    },
+                                    onSettled: () => {
+                                        setSubmitting(false)
+                                    }
+                                }
+                            )
                         }}
                     >
                         {({ isSubmitting }) => (
@@ -71,9 +90,19 @@ export default function Login() {
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                    {loginError &&
+                                    (<p className='text-sm text-(--destructive) text-start'>
+                                        Invalid email or password
+                                    </p>
+                                    )}
                                 </div>
-                                <button type="submit" disabled={isSubmitting} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
-                                    Log in
+                                
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || isPending}
+                                    className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
+                                >
+                                    {isPending ? 'Logging in...' : 'Log in'}
                                 </button>
                                 <div className="flex items-center gap-4 w-full">
                                     <div className="h-px flex-1 bg-white/10"></div>
@@ -82,7 +111,7 @@ export default function Login() {
 
                                     <div className="h-px flex-1 bg-white/10"></div>
                                 </div>
-                                <button type="submit" className='flex justify-center items-center mx-auto text-center border w-full rounded-md py-2 hover:bg-(--secondary) cursor-pointer transition-all'>
+                                <button type="button" className='flex justify-center items-center mx-auto text-center border w-full rounded-md py-2 hover:bg-(--secondary) cursor-pointer transition-all'>
                                     <FcGoogle size={16} />
                                     <span className='ps-2 text-sm'>Google</span>
                                 </button>
