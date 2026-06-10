@@ -4,12 +4,34 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { getProductBySlug } from "@/assets/data/marketplaceProducts";
+import { useGetComponentDetails } from '../../hooks/use-componentDetails'
+
 
 const ProductDetail = () => {
-    const { slug } = useParams<{ slug: string }>();
+    const { id } = useParams()
+    const { data, isLoading, error } = useGetComponentDetails(Number(id))
     const navigate = useNavigate();
-    const product = slug ? getProductBySlug(slug) : undefined;
+    const product = data?.data
+
+    if (isLoading) return (
+        <div className="p-6 lg:p-10 flex items-center justify-center min-h-screen">
+            <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+    )
+    
+    if (error) return (
+        <div className="p-6 lg:p-10 max-w-2xl mx-auto">
+            <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
+                Something went wrong
+            </h1>
+            <p className="text-muted-foreground mb-6">Failed to load product details.</p>
+            <Button asChild>
+                <Link to="/marketplace">
+                    <ArrowLeft className="w-4 h-4" /> Back to Marketplace
+                </Link>
+            </Button>
+        </div>
+    )
 
     if (!product) {
         return (
@@ -46,16 +68,16 @@ const ProductDetail = () => {
                     <Card className="bg-card border-border overflow-hidden -py-4">
                         <div className="aspect-square overflow-hidden">
                             <img
-                            src={product.img}
-                            alt={product.name}
-                            className="h-full object-cover"
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="h-full object-cover"
                             />
                         </div>
                     </Card>
                     <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-3">
                             <Badge variant="secondary" className="bg-muted text-muted-foreground border-0">
-                                {product.category}
+                                {product.type}
                             </Badge>
                         </div>
                         <h1 className="text-2xl lg:text-4xl font-heading font-bold text-foreground mb-1">
@@ -67,21 +89,18 @@ const ProductDetail = () => {
                                 Starting at
                             </span>
                             <span className="text-3xl lg:text-4xl font-heading font-bold gradient-text">
-                                {product.price}
+                                {product.price ? `$${product.price}` : 'Price unavailable'}
                             </span>
                         </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                            {product.description}
-                        </p>
                         <div className="mb-6">
                             <h2 className="text-sm font-heading font-semibold text-foreground mb-3 uppercase tracking-wide">
-                                Key Features
+                                Key Specs
                             </h2>
                             <ul className="space-y-2">
-                                {product.features.map((feature) => (
-                                    <li key={feature} className="flex items-start gap-2 text-sm text-foreground">
+                                {Object.entries(product.specs).slice(0, 5).map(([key, value]) => (  // 👈 slice to show only first 5
+                                    <li key={key} className="flex items-start gap-2 text-sm text-foreground">
                                         <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                                        <span>{feature}</span>
+                                        <span><span className="text-muted-foreground">{key}:</span> {value}</span>
                                     </li>
                                 ))}
                             </ul>

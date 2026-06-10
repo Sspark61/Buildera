@@ -32,7 +32,6 @@ interface ComponentsResponse {
 }
 
 export const useGetComponents = (params: ComponentsParams = {}) => {
-    // build query string from params
     const query = new URLSearchParams()
     if (params.type)        query.set('type', params.type)
     if (params.minPrice)    query.set('minPrice', String(params.minPrice))
