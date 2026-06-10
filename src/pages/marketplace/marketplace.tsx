@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, SlidersHorizontal, Grid3X3, List, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -17,19 +17,26 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { marketplaceProducts as products } from "@/assets/data/marketplaceProducts";
+import { useGetComponents } from "@/hooks/use-components";
 
 type ViewMode = "grid" | "list";
 
 const parsePrice = (price: string) => Number(price.replace(/[^0-9.]/g, "")) || 0;
 
-const allCategories = Array.from(new Set(products.map((p) => p.category))).sort();
-const allBrands = Array.from(new Set(products.map((p) => p.brand))).sort();
+const allCategories = ["CPU",
+    "CPU Cooler",
+    "Case",
+    "Memory",
+    "Motherboard",
+    "Power Supply",
+    "Video Card"]
 const prices = products.map((p) => parsePrice(p.price));
 const PRICE_MIN = Math.floor(Math.min(...prices) / 50) * 50;
 const PRICE_MAX = Math.ceil(Math.max(...prices) / 50) * 50;
 
 const Marketplace = () => {
     const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1)
     const [view, setView] = useState<ViewMode>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -52,17 +59,16 @@ const Marketplace = () => {
         selectedBrands.length +
         (priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX ? 1 : 0);
 
-    const filtered = useMemo(() => {
-        const q = search.toLowerCase().trim();
-        return products.filter((p) => {
-            const price = parsePrice(p.price);
-            if (q && !p.name.toLowerCase().includes(q) && !p.brand.toLowerCase().includes(q)) return false;
-            if (selectedCategories.length && !selectedCategories.includes(p.category)) return false;
-            if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
-            if (price < priceRange[0] || price > priceRange[1]) return false;
-            return true;
-        });
-    }, [search, selectedCategories, selectedBrands, priceRange]);
+    const { data, isLoading, error } = useGetComponents({
+        search,
+        type: selectedCategories[0],
+        minPrice: priceRange[0],
+        maxPrice: priceRange[1],
+        page,
+        limit: 20,
+    })
+
+    const products = data?.data.components ?? []
 
     return (
         <div className="p-4 lg:p-8">
@@ -111,11 +117,11 @@ const Marketplace = () => {
                         <PopoverTrigger asChild>
                             <Button variant="outline" className="border-border text-foreground gap-2 h-10 relative">
                                 <SlidersHorizontal className="w-4 h-4" /> Filters
-                                    {activeFilterCount > 0 && (
-                                        <Badge className="ml-1 h-5 min-w-5 px-1.5 bg-primary text-primary-foreground border-0">
-                                            {activeFilterCount}
-                                        </Badge>
-                                    )}
+                                {activeFilterCount > 0 && (
+                                    <Badge className="ml-1 h-5 min-w-5 px-1.5 bg-primary text-primary-foreground border-0">
+                                        {activeFilterCount}
+                                    </Badge>
+                                )}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent align="end" className="w-[320px] sm:w-[380px] p-0">
@@ -162,35 +168,7 @@ const Marketplace = () => {
                                                 const checked = selectedCategories.includes(cat);
                                                 return (
                                                     <label
-                                                    key={cat}
-                                                    htmlFor={id}
-                                                    className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
-                                                    >
-                                                        <Checkbox
-                                                            id={id}
-                                                            checked={checked}
-                                                            onCheckedChange={() =>
-                                                            toggle(selectedCategories, cat, setSelectedCategories)
-                                                            }
-                                                        />
-                                                        <span className="truncate">{cat}</span>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <Separator />
-                                    <div className="space-y-2">
-                                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                            Manufacturer
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {allBrands.map((brand) => {
-                                                const id = `brand-${brand}`;
-                                                const checked = selectedBrands.includes(brand);
-                                                return (
-                                                    <label
-                                                        key={brand}
+                                                        key={cat}
                                                         htmlFor={id}
                                                         className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
                                                     >
@@ -198,10 +176,10 @@ const Marketplace = () => {
                                                             id={id}
                                                             checked={checked}
                                                             onCheckedChange={() =>
-                                                                toggle(selectedBrands, brand, setSelectedBrands)
+                                                                toggle(selectedCategories, cat, setSelectedCategories)
                                                             }
                                                         />
-                                                        <span className="truncate">{brand}</span>
+                                                        <span className="truncate">{cat}</span>
                                                     </label>
                                                 );
                                             })}
@@ -215,7 +193,7 @@ const Marketplace = () => {
                                     onClick={() => setFiltersOpen(false)}
                                     className="w-full h-9"
                                 >
-                                    Show {filtered.length} {filtered.length === 1 ? "result" : "results"}
+                                    Show {products.length} {products.length === 1 ? "result" : "results"}
                                 </Button>
                             </div>
                         </PopoverContent>
@@ -225,29 +203,29 @@ const Marketplace = () => {
                     <div className="flex flex-wrap gap-2 mb-6">
                         {selectedCategories.map((c) => (
                             <Badge
-                            key={`c-${c}`}
-                            variant="secondary"
-                            className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                            onClick={() => toggle(selectedCategories, c, setSelectedCategories)}
+                                key={`c-${c}`}
+                                variant="secondary"
+                                className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
+                                onClick={() => toggle(selectedCategories, c, setSelectedCategories)}
                             >
                                 {c} <X className="w-3 h-3" />
                             </Badge>
                         ))}
                         {selectedBrands.map((b) => (
                             <Badge
-                            key={`b-${b}`}
-                            variant="secondary"
-                            className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                            onClick={() => toggle(selectedBrands, b, setSelectedBrands)}
+                                key={`b-${b}`}
+                                variant="secondary"
+                                className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
+                                onClick={() => toggle(selectedBrands, b, setSelectedBrands)}
                             >
                                 {b} <X className="w-3 h-3" />
                             </Badge>
                         ))}
                         {(priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX) && (
                             <Badge
-                            variant="secondary"
-                            className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                            onClick={() => setPriceRange([PRICE_MIN, PRICE_MAX])}
+                                variant="secondary"
+                                className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
+                                onClick={() => setPriceRange([PRICE_MIN, PRICE_MAX])}
                             >
                                 ${priceRange[0]} – ${priceRange[1]} <X className="w-3 h-3" />
                             </Badge>
@@ -260,7 +238,15 @@ const Marketplace = () => {
                         </button>
                     </div>
                 )}
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                    <div className="text-center py-16">
+                        <p className="text-sm text-muted-foreground">Loading...</p>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-16">
+                        <p className="text-sm text-(--destructive)">Failed to load products.</p>
+                    </div>
+                ) : products.length === 0 ? (
                     <div className="text-center py-16 border border-dashed border-border rounded-xl">
                         <p className="text-sm text-muted-foreground">No products match your filters.</p>
                         <Button variant="ghost" size="sm" onClick={resetFilters} className="mt-3">
@@ -269,32 +255,32 @@ const Marketplace = () => {
                     </div>
                 ) : view === "grid" ? (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {filtered.map((product, i) => (
+                        {products.map((product, i) => (
                             <motion.div
-                                key={product.slug}
+                                key={product.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.04 }}
                             >
-                                <Link to={`/marketplace/${product.slug}`} className="block">
+                                <Link to={`/marketplace/${product.id}`} className="block">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative">
                                         <div className="aspect-square overflow-hidden -m-4">
                                             <img
-                                            src={product.img}
-                                            alt={product.name}
-                                            loading="lazy"
-                                            width={512}
-                                            height={512}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                src={product.imageUrl}
+                                                alt={product.name}
+                                                loading="lazy"
+                                                width={512}
+                                                height={512}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
                                         </div>
                                         <div className="p-3">
                                             <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1">
-                                                {product.category}
+                                                {product.type}
                                             </Badge>
                                             <h3 className="text-sm font-heading font-semibold text-foreground truncate">{product.name}</h3>
                                             <p className="text-[10px] text-muted-foreground mb-3">{product.brand}</p>
-                                            <span className="text-base font-heading font-bold gradient-text">{product.price}</span>
+                                            <span className="text-base font-heading font-bold gradient-text">{`${product.price} $`}</span>
                                         </div>
                                     </Card>
                                 </Link>
@@ -303,19 +289,19 @@ const Marketplace = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col gap-3">
-                        {filtered.map((product, i) => (
+                        {products.map((product, i) => (
                             <motion.div
-                                key={product.slug}
+                                key={product.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.03 }}
                             >
-                                <Link to={`/marketplace/${product.slug}`} className="block">
+                                <Link to={`/marketplace/${product.id}`} className="block">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer">
                                         <div className="flex gap-4 p-3">
                                             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
                                                 <img
-                                                    src={product.img}
+                                                    src={product.imageUrl}
                                                     alt={product.name}
                                                     loading="lazy"
                                                     width={256}
@@ -327,7 +313,7 @@ const Marketplace = () => {
                                                 <div className="flex items-start justify-between gap-3 mb-1">
                                                     <div className="min-w-0">
                                                         <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1.5">
-                                                            {product.category}
+                                                            {product.type}
                                                         </Badge>
                                                         <h3 className="text-sm sm:text-base font-heading font-semibold text-foreground truncate">
                                                             {product.name}
@@ -335,12 +321,10 @@ const Marketplace = () => {
                                                         <p className="text-xs text-muted-foreground">{product.brand}</p>
                                                     </div>
                                                     <span className="text-base sm:text-lg font-heading font-bold gradient-text shrink-0">
-                                                        {product.price}
+                                                        {`${product.price} $`}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                                    {product.description}
-                                                </p>
+
                                             </div>
                                         </div>
                                     </Card>
@@ -349,6 +333,25 @@ const Marketplace = () => {
                         ))}
                     </div>
                 )}
+                <div className="flex justify-center gap-2 mt-6">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage(p => p - 1)}
+                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50"
+                    >
+                        Previous
+                    </button>
+                    <span className="px-4 py-2 text-sm text-muted-foreground">
+                        Page {page} of {data?.data.pages ?? 1}
+                    </span>
+                    <button
+                        disabled={page === data?.data.pages}
+                        onClick={() => setPage(p => p + 1)}
+                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
             </motion.div>
         </div>
     );
