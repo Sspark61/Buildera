@@ -16,19 +16,14 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { useGetProfile, useUpdateProfile } from "@/hooks/use-profile";
-import pcBuild1 from "@/assets/images/pc-build-1.jpg";
-import pcBuild2 from "@/assets/images/pc-build-2.jpg";
-import pcBuild4 from "@/assets/images/pc-build-4.jpg";
-
-const userBuilds = [
-    { name: "Neon Vanguard X-1", price: "$2,499", category: "Gaming", img: pcBuild1 },
-    { name: "Alpine Mini Pro", price: "$1,299", category: "Compact", img: pcBuild2 },
-    { name: "Neon Strike", price: "$1,899", category: "Streaming", img: pcBuild4 },
-];
+import { useGetBuilds } from '@/hooks/use-builds'
 
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
     const { mutate: updateProfile, isPending } = useUpdateProfile()
+
+    const { data: buildsData, isLoading: buildsLoading } = useGetBuilds()
+    const builds = buildsData?.data ?? []
 
     const [isEditing, setIsEditing] = useState(false)
     const [updateError, setUpdateError] = useState('')
@@ -51,7 +46,7 @@ const Profile = () => {
         .toUpperCase() ?? "U"
 
     const stats = [
-        { label: "My builds", value: userBuilds.length.toString() },
+        { label: "My builds", value: builds.length.toString() },
         { label: "Total spend", value: "$5.7k" },
     ]
 
@@ -173,23 +168,43 @@ const Profile = () => {
                         </TabsTrigger>
                     </TabsList>
                     <TabsContent value="builds" className="mt-4">
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                            {userBuilds.map((build, i) => (
-                                <motion.div key={build.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                                    <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
-                                        <div className="aspect-square overflow-hidden bg-muted -m-4">
-                                            <img src={build.img} alt={build.name} loading="lazy" width={512} height={512}
-                                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-                                        </div>
-                                        <div className="p-3">
-                                            <Badge variant="secondary" className="text-[10px] mb-1.5">{build.category}</Badge>
-                                            <h3 className="text-sm font-heading font-semibold text-foreground truncate">{build.name}</h3>
-                                            <span className="text-base font-heading font-bold text-foreground">{build.price}</span>
-                                        </div>
-                                    </Card>
-                                </motion.div>
-                            ))}
-                        </div>
+                        {buildsLoading ? (
+                            <p className="text-sm text-muted-foreground text-center py-10">Loading builds...</p>
+                        ) : builds.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center text-center py-16 border border-dashed border-border rounded-xl">
+                                <p className="text-sm text-foreground font-medium">No builds yet</p>
+                                <p className="text-xs text-muted-foreground mt-1 mb-4">Start building your dream PC.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                {builds.map((build, i) => (
+                                    <motion.div key={build.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+                                        <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
+                                            <div className="p-4 flex flex-col gap-2">
+                                                <Badge variant="secondary" className="text-[10px] w-fit -mx-1">{build.purpose}</Badge>
+                                                <h3 className="text-sm font-heading font-semibold text-foreground truncate">
+                                                    {build.name ?? 'Unnamed Build'}
+                                                </h3>
+                                                <div className="flex items-center justify-between mt-1">
+                                                    <span className="text-xs text-muted-foreground">{build.componentCount} components</span>
+                                                    <span className="text-sm font-heading font-bold gradient-text">
+                                                        ${build.totalPrice.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-muted-foreground">
+                                                        Budget: ${build.budget.toLocaleString()}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </motion.div>
