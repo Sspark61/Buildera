@@ -26,7 +26,8 @@ const allCategories = ["CPU",
     "Memory",
     "Motherboard",
     "Power Supply",
-    "Video Card"]
+    "Video Card",
+    "Storage"]
 const PRICE_MIN = 0
 const PRICE_MAX = 2500
 
