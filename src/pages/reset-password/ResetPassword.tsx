@@ -23,7 +23,7 @@ export default function ResetPassword() {
     const navigateToLogin = () => {
         setTimeout(() => {
             navigate('/login')
-        }, 3000);
+        }, 2000);
     }
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
