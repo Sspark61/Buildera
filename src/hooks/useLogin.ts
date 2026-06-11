@@ -10,6 +10,8 @@ interface LoginResponse {
     success: boolean
     message: string
     token: string
+    userName: string
+    imageUrl : string
 }
 
 export const useLogin = () => {
@@ -21,6 +23,8 @@ export const useLogin = () => {
         }) as Promise<LoginResponse>,
         onSuccess: (data) => {
             localStorage.setItem('token', data.token)
+            localStorage.setItem('userName', data.userName)
+            localStorage.setItem('imageUrl', data.imageUrl)
         },
     })
 }

@@ -32,9 +32,13 @@ export function AppSidebar() {
     const collapsed = state === "collapsed";
     const token = localStorage.getItem('token');
     const { theme } = useTheme();
+    const username = localStorage.getItem('userName')
+    const image = localStorage.getItem('imageUrl')
 
     const bottomLinks = [
-        { to: "/profile", label: "Profile", icon: User },
+        username ?
+            { to: "/profile", label: username, icon: User }
+            : { to: "/profile", label: "Profile", icon: User },
         { to: "/settings", label: "Settings", icon: Settings },
         token
             ? { to: "/", label: "Sign Out", icon: LogOut, desc: "Sign out" }
