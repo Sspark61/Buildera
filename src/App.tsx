@@ -13,6 +13,7 @@ import ProductDetail from "./pages/product-details/productDetails.tsx";
 import Profile from "./pages/profile/profile.tsx"
 import ForgotPassword from "./pages/forgot-password/forgotPassword.tsx";
 import ResetPassword from "./pages/reset-password/ResetPassword.tsx";
+import Builder from "./pages/builder/Builder.tsx";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -30,7 +31,8 @@ const router = createBrowserRouter([
       { path: "/settings", element: <Settings /> },
       { path: "/marketplace", element: <Marketplace /> },
       { path: "/marketplace/:id", element: <ProductDetail /> },
-      { path: "/profile", element: <Profile /> }
+      { path: "/profile", element: <Profile /> },
+      { path: "/builder", element: <Builder /> },
     ],
   },
   { path: "/login", element: <Login /> },
