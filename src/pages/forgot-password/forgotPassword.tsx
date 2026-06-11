@@ -1,21 +1,19 @@
 
+
 import loginImg from '/src/assets/images/login.jpg'
 import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
-import { Mail, Lock, Eye } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { FcGoogle } from "react-icons/fc";
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useLogin } from '../../hooks/useLogin'
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from "@/hooks/use-theme";
+import { useForgotPassword } from '../../hooks/useForgotPassword';
+import { useState } from 'react';
 
-export default function Login() {
-    const [showPassword, setShowPassword] = useState(false);
-    const [loginError, setLoginError] = useState('')
-    const { mutate: login, isPending } = useLogin()
-    const navigate = useNavigate()
+export default function ForgotPassword() {
+    const [resetError, setReseterror] = useState('');
+    const [successError, setSuccessError] = useState('');
+    const { mutate: Forgot, isPending } = useForgotPassword();
     const { theme } = useTheme()
 
     return (
@@ -27,14 +25,14 @@ export default function Login() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
-                <h3 className='text-xl font-heading'>Welcome back</h3>
-                <p className='text-sm text-(--muted-foreground) pb-4'>Log in to your account</p>
+                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-1/2 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
+                <h3 className='text-xl font-heading'>Forgot Password?</h3>
                 <div>
                     <Formik
-                        initialValues={{ email: '', password: '' }}
+                        initialValues={{ email: '' }}
                         validate={values => {
-                            setLoginError('')
+                            setReseterror('')
+                            setSuccessError('')
                             const errors: any = {};
                             if (!values.email) {
                                 errors.email = '*This field is required';
@@ -43,20 +41,18 @@ export default function Login() {
                             ) {
                                 errors.email = '*Invalid email address';
                             }
-                            if (!values.password) {
-                                errors.password = '*This field is required';
-                            }
                             return errors;
                         }}
                         onSubmit={(values, { setSubmitting }) => {
-                            login(
-                                { email: values.email, password: values.password },
+                            Forgot(
+                                { email: values.email },
                                 {
                                     onSuccess: () => {
-                                        navigate('/')
+                                        console.log('Email Sent Successfully');
+                                        setSuccessError('Email Sent Successfully')
                                     },
                                     onError: () => {
-                                        setLoginError('*Invalid email or password')
+                                        setReseterror('*Invalid email')
                                         setSubmitting(false)
                                     },
                                     onSettled: () => {
@@ -85,18 +81,14 @@ export default function Login() {
                                         component="div"
                                         className='text-start text-(--destructive) text-sm mt-1'
                                     />
-                                </div>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
-                                        <Lock size={18} strokeWidth={1.5} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
-                                        <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
-                                    </div>
-                                    <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                    <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-2 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
-                                    {loginError &&
+                                    {resetError &&
                                         (<p className='text-sm text-(--destructive) text-start mt-1'>
-                                            Invalid email or password
+                                            {resetError}
+                                        </p>
+                                        )}
+                                    {successError &&
+                                        (<p className='text-sm text-green-400 text-start mt-1'>
+                                            {successError}
                                         </p>
                                         )}
                                 </div>
@@ -106,20 +98,9 @@ export default function Login() {
                                     disabled={isSubmitting || isPending}
                                     className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
                                 >
-                                    {isPending ? 'Logging in...' : 'Log in'}
+                                    {isPending ? 'Checking Your Account' : 'Reset Password'}
                                 </button>
-                                <div className="flex items-center gap-4 w-full">
-                                    <div className="h-px flex-1 bg-white/10"></div>
-
-                                    <span className="text-(--muted-foreground) text-xs">or</span>
-
-                                    <div className="h-px flex-1 bg-white/10"></div>
-                                </div>
-                                <button type="button" className='flex justify-center items-center mx-auto text-center border w-full rounded-md py-2 hover:bg-(--secondary) cursor-pointer transition-all'>
-                                    <FcGoogle size={16} />
-                                    <span className='ps-2 text-sm'>Google</span>
-                                </button>
-                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <Link to="/signup" className="text-(--ring) hover:underline">Sign up</Link></p>
+                                <Link to='/login' className='text-sm text-(--primary)'>Back to login</Link>
                             </Form>
                         )}
                     </Formik>
@@ -128,3 +109,4 @@ export default function Login() {
         </div>
     )
 }
+
