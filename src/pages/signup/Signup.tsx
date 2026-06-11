@@ -7,12 +7,15 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useRegister } from '../../hooks/useSignup';
+import { useRegister } from '../../hooks/useRegister';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from "@/hooks/use-theme";
 export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const { mutate: signup, isPending } = useRegister()
     const navigate = useNavigate()
+    const { theme } = useTheme()
+    const [signupError, setSignupError] = useState('');
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
             <div className="hidden lg:block relative h-full bg-cover bg-center opacity-70" style={{ backgroundImage: `url(${loginImg})` }}>
@@ -29,6 +32,7 @@ export default function Signup() {
                     <Formik
                         initialValues={{ userName: '', email: '', password: '', cPassword: '' }}
                         validate={values => {
+                            setSignupError('')
                             const errors = {};
                             if (!values.userName) {
                                 errors.userName = '*This field is required';
@@ -56,9 +60,12 @@ export default function Signup() {
                                 ,
                                 {
                                     onSuccess: () => {
+                                        console.log("all good");
+
                                         navigate('/login');
                                     },
                                     onError: () => {
+                                        setSignupError('*Email already exists or invalid data');
                                         setSubmitting(false);
                                     },
                                     onSettled: () => {
@@ -121,9 +128,12 @@ export default function Signup() {
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="cPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                    {signupError && (
+                                        <p className='text-sm text-(--destructive) text-start'>{signupError}</p>
+                                    )}
                                 </div>
                                 <button type="submit" disabled={isSubmitting || isPending} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
-                                    Create Account
+                                    {isPending ? "Creating your account..." : "Create Account"}
                                 </button>
                                 <div className="flex items-center gap-4 w-full">
                                     <div className="h-px flex-1 bg-white/10"></div>
