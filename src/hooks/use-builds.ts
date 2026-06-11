@@ -142,3 +142,14 @@ export const useRemoveComponentFromBuild = (buildId: number) => {
         },
     })
 }
+
+export const useDeleteBuild = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (buildId: number) =>
+            api(`/builds/${buildId}`, { method: 'DELETE' }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['builds'] })
+        },
+    })
+}
