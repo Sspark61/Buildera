@@ -13,14 +13,27 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useNavigate } from 'react-router-dom'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { componentCategories } from "@/assets/data/pcComponents";
 import type { ComponentCategory } from "@/assets/data/pcComponents";
 import { useGetComponents } from "@/hooks/use-components";
 import {
     useGetBuild,
     useCreateBuild,
+    useUpdateBuild,
     useAddComponentToBuild,
     useRemoveComponentFromBuild,
+    useDeleteBuild,
 } from "@/hooks/use-builds";
 import { useSearchParams } from 'react-router-dom'
 
@@ -352,11 +365,15 @@ const Builder = () => {
     const [isSaved, setIsSaved] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
     const [seeded, setSeeded] = useState(false)
+    const navigate = useNavigate()
 
     // ---- Mutations ----
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
+    const { mutate: updateBuild, isPending: isUpdating } = useUpdateBuild(activeBuildId ?? 0)
     const { mutate: addComponent } = useAddComponentToBuild(activeBuildId ?? 0)
     const { mutate: removeComponent } = useRemoveComponentFromBuild(activeBuildId ?? 0)
+    const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
     // ---- Seed state from existing build ----
     useEffect(() => {
@@ -439,27 +456,50 @@ const Builder = () => {
 
     const handleSave = () => {
         setSaveError('')
-        createBuild(
-            {
-                name: buildName,
-                purpose: buildPurpose,
-                budget: Number(budget) || 0,
-            },
-            {
-                onSuccess: (data) => {
-                    const buildId = data.data.id
-                    setActiveBuildId(buildId)
-                    Object.values(selections).forEach(component => {
-                        addComponent(component.id)
-                    })
-                    setIsSaved(true)
-                    setSaveError('')
+
+        if (activeBuildId) {
+            // Editing an existing build — just update metadata, components are
+            // already synced in real time via addComponent / removeComponent
+            updateBuild(
+                {
+                    name: buildName,
+                    purpose: buildPurpose,
+                    budget: Number(budget) || 0,
                 },
-                onError: (error) => {
-                    setSaveError(error.message)
+                {
+                    onSuccess: () => {
+                        setIsSaved(true)
+                        setSaveError('')
+                    },
+                    onError: (error) => {
+                        setSaveError(error.message)
+                    }
                 }
-            }
-        )
+            )
+        } else {
+            // New build — create it then bulk-add all locally selected components
+            createBuild(
+                {
+                    name: buildName,
+                    purpose: buildPurpose,
+                    budget: Number(budget) || 0,
+                },
+                {
+                    onSuccess: (data) => {
+                        const buildId = data.data.id
+                        setActiveBuildId(buildId)
+                        Object.values(selections).forEach(component => {
+                            addComponent(component.id)
+                        })
+                        setIsSaved(true)
+                        setSaveError('')
+                    },
+                    onError: (error) => {
+                        setSaveError(error.message)
+                    }
+                }
+            )
+        }
     }
 
     const handleNewBuild = () => {
@@ -473,6 +513,18 @@ const Builder = () => {
         setCompatibilityErrors([])
         setSeeded(false)
     }
+
+    const handleDelete = () => {
+    if (!activeBuildId) return
+    deleteBuild(activeBuildId, {
+        onSuccess: () => {
+            navigate('/profile')
+        },
+        onError: (error) => {
+            setSaveError(error.message)
+        }
+    })
+}
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
 
@@ -521,10 +573,20 @@ const Builder = () => {
                         <Button variant="outline" size="sm" onClick={handleNewBuild} className="border-border text-muted-foreground gap-1.5">
                             <FileDown className="w-3.5 h-3.5" /> New
                         </Button>
+                        {activeBuildId && (
+        <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
+        >
+            <Trash2 className="w-3.5 h-3.5" /> Delete
+        </Button>
+    )}
                         <Button
                             size="sm"
                             onClick={handleSave}
-                            disabled={Object.keys(selections).length === 0 || isCreating || isSaved}
+                            disabled={Object.keys(selections).length === 0 || isCreating || isUpdating || isSaved}
                             className="gradient-primary neon-glow text-primary-foreground gap-1.5"
                         >
                             <Save className="w-3.5 h-3.5" />
@@ -624,7 +686,7 @@ const Builder = () => {
                                 <BuildSummary
                                     selections={selections}
                                     onSave={handleSave}
-                                    isSaving={isCreating}
+                                    isSaving={isCreating || isUpdating}
                                     isSaved={isSaved}
                                 />
                                 <BuildTips
@@ -666,6 +728,26 @@ const Builder = () => {
                     onSelect={handleSelect}
                 />
             )}
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+    <AlertDialogContent>
+        <AlertDialogHeader>
+            <AlertDialogTitle>Delete this build?</AlertDialogTitle>
+            <AlertDialogDescription>
+                This will permanently delete "{buildName}" and all its components. This cannot be undone.
+            </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+                {isDeleting ? 'Deleting...' : 'Delete build'}
+            </AlertDialogAction>
+        </AlertDialogFooter>
+    </AlertDialogContent>
+</AlertDialog>
         </div>
     )
 }
