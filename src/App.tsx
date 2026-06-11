@@ -12,6 +12,7 @@ import Marketplace from "./pages/marketplace/marketplace.tsx";
 import ProductDetail from "./pages/product-details/productDetails.tsx";
 import Profile from "./pages/profile/profile.tsx"
 import ForgotPassword from "./pages/forgot-password/forgotPassword.tsx";
+import ResetPassword from "./pages/reset-password/ResetPassword.tsx";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/signup", element: <Signup /> },
   { path: "/forgotPassword", element: <ForgotPassword /> },
+  { path: "/resetPassword/:token", element: <ResetPassword /> },
   { path: "*", element: <NotFound /> }
 ]);
 
