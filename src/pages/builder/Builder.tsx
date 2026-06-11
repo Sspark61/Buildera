@@ -17,10 +17,12 @@ import { componentCategories } from "@/assets/data/pcComponents";
 import type { ComponentCategory } from "@/assets/data/pcComponents";
 import { useGetComponents } from "@/hooks/use-components";
 import {
+    useGetBuild,
     useCreateBuild,
     useAddComponentToBuild,
     useRemoveComponentFromBuild,
 } from "@/hooks/use-builds";
+import { useSearchParams } from 'react-router-dom'
 
 // ---- Types ----
 interface ApiComponent {
@@ -70,7 +72,6 @@ const ComponentBrowser = ({
     const [debouncedSearch, setDebouncedSearch] = useState("")
     const [page, setPage] = useState(1)
 
-    // debounce search
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search), 400)
         return () => clearTimeout(t)
@@ -120,8 +121,8 @@ const ComponentBrowser = ({
                                     key={c.id}
                                     onClick={() => { onSelect(c); onOpenChange(false) }}
                                     className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${isSelected
-                                            ? "border-primary bg-primary/5"
-                                            : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
                                         }`}
                                 >
                                     <img
@@ -233,7 +234,6 @@ const BuildTips = ({
 }) => {
     const tips: { type: "warn" | "ok" | "info"; text: string }[] = []
 
-    // show backend compatibility errors first
     compatibilityErrors.forEach(err => {
         tips.push({ type: err.severity === 'error' ? 'warn' : 'info', text: err.message })
     })
@@ -333,6 +333,14 @@ const AIBuildPanel = ({ onApplyBuild }: { onApplyBuild: (b: Record<string, ApiCo
 
 // ---- Main Builder ----
 const Builder = () => {
+    // ---- URL params & existing build fetch ----
+    const [searchParams] = useSearchParams()
+    const existingBuildId = searchParams.get('buildId')
+    const { data: existingBuildData, isLoading: isBuildLoading } = useGetBuild(
+        existingBuildId ? Number(existingBuildId) : 0
+    )
+
+    // ---- State ----
     const [selections, setSelections] = useState<Record<string, ApiComponent>>({})
     const [browserOpen, setBrowserOpen] = useState(false)
     const [activeCategory, setActiveCategory] = useState<ComponentCategory | null>(null)
@@ -343,11 +351,51 @@ const Builder = () => {
     const [saveError, setSaveError] = useState('')
     const [isSaved, setIsSaved] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
+    const [seeded, setSeeded] = useState(false)
 
+    // ---- Mutations ----
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: addComponent } = useAddComponentToBuild(activeBuildId ?? 0)
     const { mutate: removeComponent } = useRemoveComponentFromBuild(activeBuildId ?? 0)
 
+    // ---- Seed state from existing build ----
+    useEffect(() => {
+        if (!existingBuildId) return
+        if (seeded) return
+        if (!existingBuildData?.data) return
+
+        const b = existingBuildData.data
+
+        setBuildName(b.name ?? "My Custom Build")
+        setBuildPurpose(b.purpose ?? "Gaming")
+        setBudget(b.budget ? String(b.budget) : "")
+        setActiveBuildId(b.id)
+        setIsSaved(true)
+
+        if (b.components?.length) {
+            const mapped: Record<string, ApiComponent> = {}
+            b.components.forEach((c) => {
+                const catKey = Object.entries(categoryTypeMap).find(
+                    ([, v]) => v === c.type
+                )?.[0]
+                if (catKey) {
+                    mapped[catKey] = {
+                        id: c.id,
+                        name: c.name,
+                        type: c.type,
+                        brand: c.brand,
+                        price: c.price,
+                        imageUrl: c.imageUrl,
+                    }
+                }
+            })
+            setSelections(mapped)
+        }
+
+        setSeeded(true)
+    }, [existingBuildData, existingBuildId, seeded])
+
+    // ---- Handlers ----
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
         setBrowserOpen(true)
@@ -359,10 +407,9 @@ const Builder = () => {
         if (activeBuildId) {
             addComponent(component.id, {
                 onSuccess: (res) => {
-                    // show compatibility errors if any
                     if (!res.success && res.data?.errors) {
                         setCompatibilityErrors(res.data.errors)
-                        return // don't add incompatible component
+                        return
                     }
                     setCompatibilityErrors([])
                     setSelections(prev => ({ ...prev, [activeCategory.key]: component }))
@@ -370,7 +417,6 @@ const Builder = () => {
                 }
             })
         } else {
-            // no build yet, just store locally until save
             setSelections(prev => ({ ...prev, [activeCategory.key]: component }))
             setCompatibilityErrors([])
             setIsSaved(false)
@@ -403,12 +449,9 @@ const Builder = () => {
                 onSuccess: (data) => {
                     const buildId = data.data.id
                     setActiveBuildId(buildId)
-
-                    // add all selected components to the new build
                     Object.values(selections).forEach(component => {
                         addComponent(component.id)
                     })
-
                     setIsSaved(true)
                     setSaveError('')
                 },
@@ -428,9 +471,19 @@ const Builder = () => {
         setSaveError('')
         setIsSaved(false)
         setCompatibilityErrors([])
+        setSeeded(false)
     }
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
+
+    // ---- Loading state while fetching existing build ----
+    if (existingBuildId && isBuildLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <p className="text-sm text-muted-foreground">Loading build...</p>
+            </div>
+        )
+    }
 
     return (
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
