@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useGetProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useGetBuilds } from '@/hooks/use-builds'
+import { Link } from 'react-router-dom';
 
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
@@ -179,28 +180,30 @@ const Profile = () => {
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                 {builds.map((build, i) => (
                                     <motion.div key={build.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                                        <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
-                                            <div className="p-4 flex flex-col gap-2">
-                                                <Badge variant="secondary" className="text-[10px] w-fit -mx-1">{build.purpose}</Badge>
-                                                <h3 className="text-sm font-heading font-semibold text-foreground truncate">
-                                                    {build.name ?? 'Unnamed Build'}
-                                                </h3>
-                                                <div className="flex items-center justify-between mt-1">
-                                                    <span className="text-xs text-muted-foreground">{build.componentCount} components</span>
-                                                    <span className="text-sm font-heading font-bold gradient-text">
-                                                        ${build.totalPrice.toLocaleString()}
-                                                    </span>
+                                        <Link to={`/builder?buildId=${build.id}`}>
+                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
+                                                <div className="p-4 flex flex-col gap-2">
+                                                    <Badge variant="secondary" className="text-[10px] w-fit -mx-1">{build.purpose}</Badge>
+                                                    <h3 className="text-sm font-heading font-semibold text-foreground truncate">
+                                                        {build.name ?? 'Unnamed Build'}
+                                                    </h3>
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <span className="text-xs text-muted-foreground">{build.componentCount} components</span>
+                                                        <span className="text-sm font-heading font-bold gradient-text">
+                                                            ${build.totalPrice.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Budget: ${build.budget.toLocaleString()}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-xs text-muted-foreground">
-                                                        Budget: ${build.budget.toLocaleString()}
-                                                    </span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </Card>
+                                            </Card>
+                                        </Link>
                                     </motion.div>
                                 ))}
                             </div>
