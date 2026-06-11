@@ -93,8 +93,9 @@ export default function Login() {
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                    <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-2 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
                                     {loginError &&
-                                        (<p className='text-sm text-(--destructive) text-start'>
+                                        (<p className='text-sm text-(--destructive) text-start mt-1'>
                                             Invalid email or password
                                         </p>
                                         )}
