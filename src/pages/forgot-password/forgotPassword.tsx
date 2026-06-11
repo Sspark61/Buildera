@@ -49,7 +49,7 @@ export default function ForgotPassword() {
                                 {
                                     onSuccess: () => {
                                         console.log('Email Sent Successfully');
-                                        setSuccessError('Email Sent Successfully')
+                                        setSuccessError('Email sent successfully')
                                     },
                                     onError: () => {
                                         setReseterror('*Invalid email')
