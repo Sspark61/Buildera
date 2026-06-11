@@ -16,12 +16,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
-import { marketplaceProducts as products } from "@/assets/data/marketplaceProducts";
 import { useGetComponents } from "@/hooks/use-components";
 
 type ViewMode = "grid" | "list";
-
-const parsePrice = (price: string) => Number(price.replace(/[^0-9.]/g, "")) || 0;
 
 const allCategories = ["CPU",
     "CPU Cooler",
@@ -29,10 +26,10 @@ const allCategories = ["CPU",
     "Memory",
     "Motherboard",
     "Power Supply",
-    "Video Card"]
-const prices = products.map((p) => parsePrice(p.price));
-const PRICE_MIN = Math.floor(Math.min(...prices) / 50) * 50;
-const PRICE_MAX = Math.ceil(Math.max(...prices) / 50) * 50;
+    "Video Card",
+    "Storage"]
+const PRICE_MIN = 0
+const PRICE_MAX = 2500
 
 const Marketplace = () => {
     const [search, setSearch] = useState("");
@@ -41,7 +38,6 @@ const Marketplace = () => {
     const [filtersOpen, setFiltersOpen] = useState(false);
 
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
 
     const toggle = (list: string[], value: string, setter: (v: string[]) => void) => {
@@ -50,13 +46,11 @@ const Marketplace = () => {
 
     const resetFilters = () => {
         setSelectedCategories([]);
-        setSelectedBrands([]);
         setPriceRange([PRICE_MIN, PRICE_MAX]);
     };
 
     const activeFilterCount =
         selectedCategories.length +
-        selectedBrands.length +
         (priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX ? 1 : 0);
 
     const { data, isLoading, error } = useGetComponents({
@@ -211,16 +205,6 @@ const Marketplace = () => {
                                 {c} <X className="w-3 h-3" />
                             </Badge>
                         ))}
-                        {selectedBrands.map((b) => (
-                            <Badge
-                                key={`b-${b}`}
-                                variant="secondary"
-                                className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                                onClick={() => toggle(selectedBrands, b, setSelectedBrands)}
-                            >
-                                {b} <X className="w-3 h-3" />
-                            </Badge>
-                        ))}
                         {(priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX) && (
                             <Badge
                                 variant="secondary"
@@ -280,7 +264,7 @@ const Marketplace = () => {
                                             </Badge>
                                             <h3 className="text-sm font-heading font-semibold text-foreground truncate">{product.name}</h3>
                                             <p className="text-[10px] text-muted-foreground mb-3">{product.brand}</p>
-                                            <span className="text-base font-heading font-bold gradient-text">{`${product.price} $`}</span>
+                                            <span className="text-base font-heading font-bold gradient-text">{product.price ? `$${product.price}` : 'Price unavailable'}</span>
                                         </div>
                                     </Card>
                                 </Link>
@@ -321,10 +305,9 @@ const Marketplace = () => {
                                                         <p className="text-xs text-muted-foreground">{product.brand}</p>
                                                     </div>
                                                     <span className="text-base sm:text-lg font-heading font-bold gradient-text shrink-0">
-                                                        {`${product.price} $`}
+                                                        {product.price ? `$${product.price}` : 'Price unavailable'}
                                                     </span>
                                                 </div>
-
                                             </div>
                                         </div>
                                     </Card>
