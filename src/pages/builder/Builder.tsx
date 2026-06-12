@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
 import {
     Monitor, Cpu, CircuitBoard, MemoryStick, HardDrive, Zap, Fan, Box,
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -30,12 +31,9 @@ import { useGetComponents } from "@/hooks/use-components";
 import {
     useGetBuild,
     useCreateBuild,
-    useUpdateBuild,
-    useAddComponentToBuild,
-    useRemoveComponentFromBuild,
     useDeleteBuild,
 } from "@/hooks/use-builds";
-import { useSearchParams } from 'react-router-dom'
+import { api } from "@/api/api";
 
 // ---- Types ----
 interface ApiComponent {
@@ -45,6 +43,7 @@ interface ApiComponent {
     brand: string
     price: number | null
     imageUrl: string
+    buildComponentId?: number  // 👈 added
 }
 
 interface CompatibilityError {
@@ -52,6 +51,7 @@ interface CompatibilityError {
     rule: string
     components: string[]
     message: string
+    fix?: string
 }
 
 // ---- Category to API type map ----
@@ -121,7 +121,6 @@ const ComponentBrowser = ({
                             className="pl-9 bg-muted/30 border-border"
                         />
                     </div>
-
                     <div className="space-y-2 mt-2">
                         {isLoading ? (
                             <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
@@ -162,7 +161,6 @@ const ComponentBrowser = ({
                             )
                         })}
                     </div>
-
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 pt-2">
                             <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
@@ -248,7 +246,10 @@ const BuildTips = ({
     const tips: { type: "warn" | "ok" | "info"; text: string }[] = []
 
     compatibilityErrors.forEach(err => {
-        tips.push({ type: err.severity === 'error' ? 'warn' : 'info', text: err.message })
+        tips.push({
+            type: err.severity === 'error' ? 'warn' : 'info',
+            text: err.fix ? `${err.message} → ${err.fix}` : err.message
+        })
     })
 
     const missing = componentCategories.filter((c) => !selections[c.key])
@@ -344,16 +345,51 @@ const AIBuildPanel = ({ onApplyBuild }: { onApplyBuild: (b: Record<string, ApiCo
     )
 }
 
+// ---- Helper to refetch build and sync selections ----
+const syncBuildSelections = async (
+    buildId: number,
+    setSelections: React.Dispatch<React.SetStateAction<Record<string, ApiComponent>>>
+) => {
+    const updated: any = await api(`/builds/${buildId}`)
+    if (!updated?.data?.components) return
+
+    const mapped: Record<string, ApiComponent> = {}
+    updated.data.components.forEach((c: any) => {
+        const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === c.type)?.[0]
+        if (catKey) {
+            mapped[catKey] = {
+                id: c.id,
+                name: c.name,
+                type: c.type,
+                brand: c.brand,
+                price: c.price,
+                imageUrl: c.imageUrl,
+                buildComponentId: c.buildComponentId, // 👈 always fresh
+            }
+        }
+    })
+    setSelections(mapped)
+}
+
 // ---- Main Builder ----
 const Builder = () => {
-    // ---- URL params & existing build fetch ----
     const [searchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
+    const queryClient = useQueryClient()
+
+    useEffect(() => {
+        if (existingBuildId) {
+            queryClient.invalidateQueries({ queryKey: ['builds', Number(existingBuildId)] })
+        }
+    }, [])
     const { data: existingBuildData, isLoading: isBuildLoading } = useGetBuild(
         existingBuildId ? Number(existingBuildId) : 0
     )
 
-    // ---- State ----
+    useEffect(() => {
+        setSeeded(false)
+    }, [existingBuildId])
+
     const [selections, setSelections] = useState<Record<string, ApiComponent>>({})
     const [browserOpen, setBrowserOpen] = useState(false)
     const [activeCategory, setActiveCategory] = useState<ComponentCategory | null>(null)
@@ -363,26 +399,19 @@ const Builder = () => {
     const [activeBuildId, setActiveBuildId] = useState<number | null>(null)
     const [saveError, setSaveError] = useState('')
     const [isSaved, setIsSaved] = useState(false)
+    const [isAddingComponent, setIsAddingComponent] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
     const [seeded, setSeeded] = useState(false)
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const navigate = useNavigate()
 
-    // ---- Mutations ----
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
-    const { mutate: updateBuild, isPending: isUpdating } = useUpdateBuild(activeBuildId ?? 0)
-    const { mutate: addComponent } = useAddComponentToBuild(activeBuildId ?? 0)
-    const { mutate: removeComponent } = useRemoveComponentFromBuild(activeBuildId ?? 0)
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
-    // ---- Seed state from existing build ----
+    // ---- Seed from existing build ----
     useEffect(() => {
-        if (!existingBuildId) return
-        if (seeded) return
-        if (!existingBuildData?.data) return
-
+        if (!existingBuildId || seeded || !existingBuildData?.data) return
         const b = existingBuildData.data
-
         setBuildName(b.name ?? "My Custom Build")
         setBuildPurpose(b.purpose ?? "Gaming")
         setBudget(b.budget ? String(b.budget) : "")
@@ -391,10 +420,8 @@ const Builder = () => {
 
         if (b.components?.length) {
             const mapped: Record<string, ApiComponent> = {}
-            b.components.forEach((c) => {
-                const catKey = Object.entries(categoryTypeMap).find(
-                    ([, v]) => v === c.type
-                )?.[0]
+            b.components.forEach((c: any) => {
+                const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === c.type)?.[0]
                 if (catKey) {
                     mapped[catKey] = {
                         id: c.id,
@@ -403,36 +430,90 @@ const Builder = () => {
                         brand: c.brand,
                         price: c.price,
                         imageUrl: c.imageUrl,
+                        buildComponentId: c.buildComponentId, // 👈 stored from the start
                     }
                 }
             })
             setSelections(mapped)
         }
-
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
 
-    // ---- Handlers ----
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
         setBrowserOpen(true)
     }
 
-    const handleSelect = (component: ApiComponent) => {
+    const handleSelect = async (component: ApiComponent) => {
         if (!activeCategory) return
 
         if (activeBuildId) {
-            addComponent(component.id, {
-                onSuccess: (res) => {
-                    if (!res.success && res.data?.errors) {
-                        setCompatibilityErrors(res.data.errors)
-                        return
-                    }
-                    setCompatibilityErrors([])
-                    setSelections(prev => ({ ...prev, [activeCategory.key]: component }))
-                    setIsSaved(false)
+            setIsAddingComponent(true)
+            setCompatibilityErrors([])
+
+            // 1. remove existing component using component.id (not buildComponentId)
+            const existing = selections[activeCategory.key]
+            if (existing) {
+                try {
+                    await api(`/builds/${activeBuildId}/components/${existing.id}`, {
+                        method: 'DELETE',
+                    })
+                } catch (err) {
+                    console.error('Failed to remove existing component:', err)
                 }
-            })
+            }
+
+            // 2. add new component
+            try {
+                await api(`/builds/${activeBuildId}/components`, {
+                    method: 'POST',
+                    body: JSON.stringify({ componentId: component.id }),
+                })
+
+                await syncBuildSelections(activeBuildId, setSelections)
+                setCompatibilityErrors([])
+                setIsSaved(true)
+
+            } catch (err: any) {
+                // on failure, re-add the old component back
+                if (existing) {
+                    try {
+                        await api(`/builds/${activeBuildId}/components`, {
+                            method: 'POST',
+                            body: JSON.stringify({ componentId: existing.id }),
+                        })
+                        await syncBuildSelections(activeBuildId, setSelections)
+                    } catch {
+                        console.error('Failed to restore old component')
+                    }
+                }
+
+                try {
+                    const parsed = JSON.parse(err.message)
+                    if (parsed.data?.errors?.length) {
+                        setCompatibilityErrors(parsed.data.errors)
+                    } else if (parsed.data?.warnings?.length) {
+                        setCompatibilityErrors(parsed.data.warnings)
+                    } else {
+                        setCompatibilityErrors([{
+                            severity: 'error',
+                            rule: 'UNKNOWN',
+                            components: [],
+                            message: parsed.message || 'Failed to add component'
+                        }])
+                    }
+                } catch {
+                    setCompatibilityErrors([{
+                        severity: 'error',
+                        rule: 'UNKNOWN',
+                        components: [],
+                        message: err.message
+                    }])
+                }
+            } finally {
+                setIsAddingComponent(false)
+            }
+
         } else {
             setSelections(prev => ({ ...prev, [activeCategory.key]: component }))
             setCompatibilityErrors([])
@@ -440,66 +521,85 @@ const Builder = () => {
         }
     }
 
-    const removeSelection = (key: string) => {
+    const removeSelection = async (key: string) => {
         const component = selections[key]
+
         if (activeBuildId && component) {
-            removeComponent(component.id)
+            setIsAddingComponent(true)
+            try {
+                // use component.id not buildComponentId
+                await api(`/builds/${activeBuildId}/components/${component.id}`, {
+                    method: 'DELETE',
+                })
+                await syncBuildSelections(activeBuildId, setSelections)
+            } catch (err) {
+                console.error('Failed to remove component:', err)
+            } finally {
+                setIsAddingComponent(false)
+            }
+        } else {
+            setSelections(prev => {
+                const next = { ...prev }
+                delete next[key]
+                return next
+            })
         }
-        setSelections(prev => {
-            const next = { ...prev }
-            delete next[key]
-            return next
-        })
+
         setCompatibilityErrors([])
-        setIsSaved(false)
     }
 
     const handleSave = () => {
         setSaveError('')
 
         if (activeBuildId) {
-            // Editing an existing build — just update metadata, components are
-            // already synced in real time via addComponent / removeComponent
-            updateBuild(
-                {
+            api(`/builds/${activeBuildId}`, {
+                method: 'PUT',
+                body: JSON.stringify({
                     name: buildName,
                     purpose: buildPurpose,
                     budget: Number(budget) || 0,
-                },
-                {
-                    onSuccess: () => {
-                        setIsSaved(true)
-                        setSaveError('')
-                    },
-                    onError: (error) => {
-                        setSaveError(error.message)
-                    }
-                }
-            )
-        } else {
-            // New build — create it then bulk-add all locally selected components
-            createBuild(
-                {
-                    name: buildName,
-                    purpose: buildPurpose,
-                    budget: Number(budget) || 0,
-                },
-                {
-                    onSuccess: (data) => {
-                        const buildId = data.data.id
-                        setActiveBuildId(buildId)
-                        Object.values(selections).forEach(component => {
-                            addComponent(component.id)
-                        })
-                        setIsSaved(true)
-                        setSaveError('')
-                    },
-                    onError: (error) => {
-                        setSaveError(error.message)
-                    }
-                }
-            )
+                }),
+            }).then(() => {
+                setIsSaved(true)
+            }).catch((err) => {
+                setCompatibilityErrors([{
+                    severity: 'error',
+                    rule: 'UNKNOWN',
+                    components: [],
+                    message: err.message
+                }])
+            })
+            return
         }
+
+        createBuild(
+            { name: buildName, purpose: buildPurpose, budget: Number(budget) || 0 },
+            {
+                onSuccess: async (data) => {
+                    const buildId = data.data.id
+                    setActiveBuildId(buildId)
+
+                    for (const component of Object.values(selections)) {
+                        try {
+                            await api(`/builds/${buildId}/components`, {
+                                method: 'POST',
+                                body: JSON.stringify({ componentId: component.id }),
+                            })
+                        } catch (err) {
+                            console.error(`Failed to add ${component.name}:`, err)
+                        }
+                    }
+
+                    // sync to get buildComponentIds for future edits
+                    await syncBuildSelections(buildId, setSelections)
+                    setIsSaved(true)
+                    setSaveError('')
+                },
+                onError: (error) => {
+                    setSaveError(error.message)
+                }
+            }
+        )
     }
 
     const handleNewBuild = () => {
@@ -515,20 +615,16 @@ const Builder = () => {
     }
 
     const handleDelete = () => {
-    if (!activeBuildId) return
-    deleteBuild(activeBuildId, {
-        onSuccess: () => {
-            navigate('/profile')
-        },
-        onError: (error) => {
-            setSaveError(error.message)
-        }
-    })
-}
+        if (!activeBuildId) return
+        deleteBuild(activeBuildId, {
+            onSuccess: () => navigate('/profile'),
+            onError: (error) => setSaveError(error.message)
+        })
+    }
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
+    const isSaving = isCreating || isAddingComponent
 
-    // ---- Loading state while fetching existing build ----
     if (existingBuildId && isBuildLoading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -540,7 +636,6 @@ const Builder = () => {
     return (
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                     <div className="flex-1 min-w-0 space-y-2">
@@ -574,31 +669,26 @@ const Builder = () => {
                             <FileDown className="w-3.5 h-3.5" /> New
                         </Button>
                         {activeBuildId && (
-        <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
-        >
-            <Trash2 className="w-3.5 h-3.5" /> Delete
-        </Button>
-    )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowDeleteDialog(true)}
+                                className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </Button>
+                        )}
                         <Button
                             size="sm"
                             onClick={handleSave}
-                            disabled={Object.keys(selections).length === 0 || isCreating || isUpdating || isSaved}
+                            disabled={Object.keys(selections).length === 0 || isSaving || isSaved}
                             className="gradient-primary neon-glow text-primary-foreground gap-1.5"
                         >
                             <Save className="w-3.5 h-3.5" />
-                            {isCreating ? 'Saving...' : isSaved ? 'Saved ✓' : 'Save Build'}
+                            {isCreating ? 'Creating...' : isAddingComponent ? 'Adding...' : isSaved ? 'Saved ✓' : 'Save Build'}
                         </Button>
                     </div>
                 </div>
-
-                {saveError && (
-                    <p className="text-sm text-destructive mb-4">{saveError}</p>
-                )}
-
                 <Tabs defaultValue="components" className="space-y-6">
                     <TabsList className="bg-muted/50 border border-border">
                         <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
@@ -612,8 +702,6 @@ const Builder = () => {
                     <TabsContent value="components">
                         <div className="grid lg:grid-cols-3 gap-6">
                             <div className="lg:col-span-2 space-y-3">
-
-                                {/* AI complete banner */}
                                 <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
@@ -629,7 +717,6 @@ const Builder = () => {
                                     </Button>
                                 </Card>
 
-                                {/* Component rows */}
                                 {componentCategories.map((cat, i) => {
                                     const selected = selections[cat.key]
                                     const Icon = iconMap[cat.key] || Box
@@ -659,7 +746,9 @@ const Builder = () => {
                                                     <div className="flex items-center gap-0.5 shrink-0">
                                                         {selected && (
                                                             <Button variant="ghost" size="icon" onClick={() => removeSelection(cat.key)}
-                                                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive">
+                                                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                                                                disabled={isAddingComponent}
+                                                            >
                                                                 <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                             </Button>
                                                         )}
@@ -667,6 +756,7 @@ const Builder = () => {
                                                             variant={selected ? "outline" : "default"}
                                                             size="sm"
                                                             onClick={() => openBrowser(cat)}
+                                                            disabled={isAddingComponent}
                                                             className={selected
                                                                 ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3"
                                                                 : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3"
@@ -686,7 +776,7 @@ const Builder = () => {
                                 <BuildSummary
                                     selections={selections}
                                     onSave={handleSave}
-                                    isSaving={isCreating || isUpdating}
+                                    isSaving={isSaving}
                                     isSaved={isSaved}
                                 />
                                 <BuildTips
@@ -706,7 +796,7 @@ const Builder = () => {
                                 <BuildSummary
                                     selections={selections}
                                     onSave={handleSave}
-                                    isSaving={isCreating}
+                                    isSaving={isSaving}
                                     isSaved={isSaved}
                                 />
                                 <BuildTips
@@ -728,26 +818,27 @@ const Builder = () => {
                     onSelect={handleSelect}
                 />
             )}
+
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-    <AlertDialogContent>
-        <AlertDialogHeader>
-            <AlertDialogTitle>Delete this build?</AlertDialogTitle>
-            <AlertDialogDescription>
-                This will permanently delete "{buildName}" and all its components. This cannot be undone.
-            </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-                {isDeleting ? 'Deleting...' : 'Delete build'}
-            </AlertDialogAction>
-        </AlertDialogFooter>
-    </AlertDialogContent>
-</AlertDialog>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this build?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete "{buildName}" and all its components. This cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete build'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     )
 }
