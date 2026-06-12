@@ -72,10 +72,12 @@ interface AddComponentResponse {
 
 // ---- Hooks ----
 
-export const useGetBuilds = () => {
+export const useGetBuilds = (options?: { refetchOnMount?: boolean; staleTime?: number }) => {
     return useQuery({
         queryKey: ['builds'],
         queryFn: () => api('/builds') as Promise<BuildsResponse>,
+        refetchOnMount: options?.refetchOnMount ?? false,
+        staleTime: options?.staleTime ?? 1000 * 60 * 5,
     })
 }
 
@@ -84,6 +86,7 @@ export const useGetBuild = (id: number) => {
         queryKey: ['builds', id],
         queryFn: () => api(`/builds/${id}`) as Promise<SingleBuildResponse>,
         enabled: !!id,
+        staleTime: 0,
     })
 }
 
