@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save } from "lucide-react";
+import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,13 +15,26 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useGetProfile, useUpdateProfile } from "@/hooks/use-profile";
-import { useGetBuilds } from '@/hooks/use-builds'
+import { useGetBuilds, useDeleteBuild } from '@/hooks/use-builds'
 import { Link } from 'react-router-dom';
 
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
     const { mutate: updateProfile, isPending } = useUpdateProfile()
+    const { mutate: deleteBuild } = useDeleteBuild()
+    const [deletingId, setDeletingId] = useState<number | null>(null)
+    const [buildToDelete, setBuildToDelete] = useState<{ id: number, name: string | null } | null>(null)
 
     const { data: buildsData, isLoading: buildsLoading } = useGetBuilds()
     const builds = buildsData?.data ?? []
@@ -72,6 +85,18 @@ const Profile = () => {
             onError: (error) => {
                 setUpdateError(error.message)
             }
+        })
+    }
+
+    const handleDelete = () => {
+        if (!buildToDelete) return
+        setDeletingId(buildToDelete.id)
+        deleteBuild(buildToDelete.id, {
+            onSuccess: () => {
+                setDeletingId(null)
+                setBuildToDelete(null)
+            },
+            onError: () => setDeletingId(null)
         })
     }
 
@@ -180,8 +205,8 @@ const Profile = () => {
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                 {builds.map((build, i) => (
                                     <motion.div key={build.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                                        <Link to={`/builder?buildId=${build.id}`}>
-                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors">
+                                        <Card className="overflow-hidden group hover:border-primary/30 transition-colors relative">
+                                            <Link to={`/builder?buildId=${build.id}`}>
                                                 <div className="p-4 flex flex-col gap-2">
                                                     <Badge variant="secondary" className="text-[10px] w-fit -mx-1">{build.purpose}</Badge>
                                                     <h3 className="text-sm font-heading font-semibold text-foreground truncate">
@@ -202,8 +227,16 @@ const Profile = () => {
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </Card>
-                                        </Link>
+                                            </Link>
+                                            {/* Delete button — sits outside the Link so click doesn't navigate */}
+                                            <button
+                                                onClick={() => setBuildToDelete({ id: build.id, name: build.name })}
+                                                disabled={deletingId === build.id}
+                                                className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </Card>
                                     </motion.div>
                                 ))}
                             </div>
@@ -278,6 +311,26 @@ const Profile = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <AlertDialog open={!!buildToDelete} onOpenChange={(o) => { if (!o) setBuildToDelete(null) }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this build?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete "{buildToDelete?.name ?? 'Unnamed Build'}". This cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={!!deletingId}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={!!deletingId}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deletingId ? 'Deleting...' : 'Delete build'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
