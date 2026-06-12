@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
 import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -36,7 +37,16 @@ const Profile = () => {
     const [deletingId, setDeletingId] = useState<number | null>(null)
     const [buildToDelete, setBuildToDelete] = useState<{ id: number, name: string | null } | null>(null)
 
-    const { data: buildsData, isLoading: buildsLoading } = useGetBuilds()
+    const queryClient = useQueryClient()
+
+    useEffect(() => {
+        queryClient.invalidateQueries({ queryKey: ['builds'] })
+    }, [])
+
+    const { data: buildsData, isLoading: buildsLoading } = useGetBuilds({
+        refetchOnMount: true,
+        staleTime: 0
+    })
     const builds = buildsData?.data ?? []
 
     const [isEditing, setIsEditing] = useState(false)
