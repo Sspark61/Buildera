@@ -9,7 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from "@/hooks/use-theme";
 import { useResetPassword } from '../../hooks/useResetPassword';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 export default function ResetPassword() {
 
@@ -18,7 +18,8 @@ export default function ResetPassword() {
     const [successError, setSuccessError] = useState('');
     const { mutate: Reset, isPending } = useResetPassword();
     const { theme } = useTheme()
-    const { token } = useParams();
+    const [searchParams] = useSearchParams();
+    const token = searchParams.get('token');
     const navigate = useNavigate();
 
     const navigateToLogin = () => {
