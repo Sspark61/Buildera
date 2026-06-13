@@ -353,12 +353,12 @@ const ProductDetail = () => {
                         <div className="flex flex-col sm:flex-row gap-3 mt-auto">
                             <Button
                                 size="lg"
-                                className="flex-1 gap-2 p-2"
+                                className="flex-1 gap-2 p-5"
                                 onClick={() => navigate("/builder")}
                             >
                                 <Plus className="w-4 h-4" /> Add to Build
                             </Button>
-                            <FavoriteButton componentId={product.id} className="w-12 h-12 rounded-lg" />
+                            <FavoriteButton componentId={product.id} className="w-12 h-10 rounded-lg" />
                         </div>
                     </div>
                 </div>
