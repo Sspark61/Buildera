@@ -315,7 +315,7 @@ const landing = () => {
                             <Sparkles className="w-4 h-4" /> Start building
                         </Button>
                     </Link>
-                    <Link to="/saved-builds">
+                    <Link to="/profile">
                         <Button size="lg" variant="outline" className="cursor-pointer">View saved builds</Button>
                     </Link>
                 </div>
