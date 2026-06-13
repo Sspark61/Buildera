@@ -45,6 +45,7 @@ export function AppSidebar() {
 
     const handleSignOut = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('userName');
         window.location.href = '/login';
     }
     return (
