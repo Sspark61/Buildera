@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
-import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2, Heart, ShoppingBag } from "lucide-react";
+import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2, Heart } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

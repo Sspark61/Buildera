@@ -1,4 +1,4 @@
-import { Bell, Shield, Palette, LogOut, LogIn } from 'lucide-react';
+import { Bell, Shield, Palette } from 'lucide-react';
 import {
     Field,
     FieldContent,
@@ -13,12 +13,7 @@ import { useState } from 'react';
 export default function Settings() {
     const { theme, setTheme } = useTheme();
     const [pendingTheme, setPendingTheme] = useState(theme);
-    const token = localStorage.getItem('token');
-    const Icon = token ? LogOut : LogIn;
-    function signOut() {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-    }
+
     return (
         <div className="p-4 lg:p-8 space-y-6 max-w-3xl">
             <h1 className="font-heading text-2xl lg:text-3xl text-foreground text-bold mb-1">Settings</h1>

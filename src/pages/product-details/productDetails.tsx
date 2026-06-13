@@ -15,8 +15,7 @@ import {
     CartesianGrid,
     Tooltip,
     ReferenceLine,
-    ResponsiveContainer,
-    Legend,
+    ResponsiveContainer
 } from "recharts"
 
 // ---- Price History Hook ----
