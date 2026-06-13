@@ -4,7 +4,6 @@ import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
 import { Mail, Lock, Eye } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../../hooks/useLogin'
@@ -101,7 +100,7 @@ export default function Login() {
                                             *Invalid email or password
                                         </p>
                                         )}
-                                    <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-2 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
+                                    <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-4 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
                                 </div>
 
                                 <button
@@ -110,17 +109,6 @@ export default function Login() {
                                     className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
                                 >
                                     {isPending ? 'Logging in...' : 'Log in'}
-                                </button>
-                                <div className="flex items-center gap-4 w-full">
-                                    <div className="h-px flex-1 bg-white/10"></div>
-
-                                    <span className="text-(--muted-foreground) text-xs">or</span>
-
-                                    <div className="h-px flex-1 bg-white/10"></div>
-                                </div>
-                                <button type="button" className='flex justify-center items-center mx-auto text-center border w-full rounded-md py-2 hover:bg-(--secondary) cursor-pointer transition-all'>
-                                    <FcGoogle size={16} />
-                                    <span className='ps-2 text-sm'>Google</span>
                                 </button>
                                 <p className='text-xs text-(--muted-foreground)'>Don't have an account? <Link to="/signup" className="text-(--ring) hover:underline">Sign up</Link></p>
                             </Form>

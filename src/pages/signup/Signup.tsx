@@ -4,7 +4,6 @@ import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
 import { Mail, Lock, Eye, User } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { FcGoogle } from "react-icons/fc";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRegister } from '../../hooks/useRegister';
@@ -139,17 +138,6 @@ export default function Signup() {
                                 </div>
                                 <button type="submit" disabled={isSubmitting || isPending} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
                                     {isPending ? "Creating your account..." : "Create Account"}
-                                </button>
-                                <div className="flex items-center gap-4 w-full">
-                                    <div className="h-px flex-1 bg-white/10"></div>
-
-                                    <span className="text-(--muted-foreground) text-xs">or</span>
-
-                                    <div className="h-px flex-1 bg-white/10"></div>
-                                </div>
-                                <button type="button" className='flex justify-center items-center mx-auto text-center border w-full rounded-md py-2 hover:bg-(--secondary) cursor-pointer transition-all'>
-                                    <FcGoogle size={16} />
-                                    <span className='ps-2 text-sm'>Google</span>
                                 </button>
                                 <p className='text-xs text-(--muted-foreground)'>Already have an account?  <Link to="/login" className="text-(--ring) hover:underline">Log in</Link></p>
                             </Form>
