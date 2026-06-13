@@ -1,3 +1,5 @@
+
+
 import loginImg from '/src/assets/images/login.jpg'
 import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
@@ -10,11 +12,12 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 export default function ResetPassword() {
+
     const [showPassword, setShowPassword] = useState(false);
     const [resetError, setReseterror] = useState('');
     const [successError, setSuccessError] = useState('');
     const { mutate: Reset, isPending } = useResetPassword();
-    const { theme } = useTheme();
+    const { theme } = useTheme()
     const { token } = useParams();
     const navigate = useNavigate();
 
@@ -23,7 +26,6 @@ export default function ResetPassword() {
             navigate('/login')
         }, 2000);
     }
-
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
             <div className="hidden lg:block relative h-full bg-cover bg-center opacity-70" style={{ backgroundImage: `url(${loginImg})` }}>
@@ -33,9 +35,7 @@ export default function ResetPassword() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'>
-                    <img className='w-50 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" />
-                </Link>
+                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-50 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
                 <h3 className='text-xl font-heading'>Reset Password</h3>
                 <div>
                     <Formik
@@ -55,27 +55,19 @@ export default function ResetPassword() {
                             return errors;
                         }}
                         onSubmit={(values, { setSubmitting }) => {
-                            // Defensive check: Verify token actually exists in the URL params
-                            if (!token) {
-                                setReseterror('*Invalid or missing password reset token in the URL.');
-                                setSubmitting(false);
-                                return;
-                            }
-
                             Reset(
-                                { token, password: values.password, cPassword: values.confirmPassword },
+                                { token: token!, password: values.password, cPassword: values.confirmPassword },
                                 {
                                     onSuccess: () => {
                                         setSuccessError('Password reset successfully redirecting to login page ...');
                                         navigateToLogin();
                                     },
-                                    onError: (error: any) => {
-                                        // Uses fallback text if your API doesn't pass back an explicit message string
-                                        setReseterror(error?.message || '*Invalid or expired reset token');
-                                        setSubmitting(false);
+                                    onError: () => {
+                                        setReseterror('*Invalid or expired reset token')
+                                        setSubmitting(false)
                                     },
                                     onSettled: () => {
-                                        setSubmitting(false);
+                                        setSubmitting(false)
                                     }
                                 }
                             )
@@ -100,16 +92,16 @@ export default function ResetPassword() {
                                         </div>
                                         <ErrorMessage name="confirmPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                     </div>
-                                    {resetError && (
-                                        <p className='text-sm text-(--destructive) text-start mt-1'>
+                                    {resetError &&
+                                        (<p className='text-sm text-(--destructive) text-start mt-1'>
                                             {resetError}
                                         </p>
-                                    )}
-                                    {successError && (
-                                        <p className='text-sm text-green-400 text-start mt-1'>
+                                        )}
+                                    {successError &&
+                                        (<p className='text-sm text-green-400 text-start mt-1'>
                                             {successError}
                                         </p>
-                                    )}
+                                        )}
                                 </div>
 
                                 <button
@@ -117,7 +109,7 @@ export default function ResetPassword() {
                                     disabled={isSubmitting || isPending}
                                     className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
                                 >
-                                    {isPending ? 'Resetting your password...' : 'Reset Password'}
+                                    {isPending ? 'Reseting your password' : 'Reset Password'}
                                 </button>
                                 <Link to='/login' className='text-sm text-(--primary)'>Back to login</Link>
                             </Form>
@@ -128,3 +120,4 @@ export default function ResetPassword() {
         </div>
     )
 }
+
