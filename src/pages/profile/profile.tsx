@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
-import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2 } from "lucide-react";
+import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2, Heart, ShoppingBag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,9 +26,11 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import FavoriteButton from "@/components/favoritebutton/favoriteButton";
 import { useGetProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useGetBuilds, useDeleteBuild } from '@/hooks/use-builds'
 import { Link } from 'react-router-dom';
+import { useGetFavorites } from '@/hooks/use-favorites'
 
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
@@ -36,7 +38,8 @@ const Profile = () => {
     const { mutate: deleteBuild } = useDeleteBuild()
     const [deletingId, setDeletingId] = useState<number | null>(null)
     const [buildToDelete, setBuildToDelete] = useState<{ id: number, name: string | null } | null>(null)
-
+    const { data: favoritesData, isLoading: favoritesLoading } = useGetFavorites()
+const favorites = favoritesData?.data ?? []
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -70,9 +73,9 @@ const Profile = () => {
         .toUpperCase() ?? "U"
 
     const stats = [
-        { label: "My builds", value: builds.length.toString() },
-        { label: "Total spend", value: "$5.7k" },
-    ]
+    { label: "My builds", value: builds.length.toString() },
+    { label: "Wishlist", value: favorites.length.toString() },
+]
 
     const openEdit = () => {
         setDraft({
@@ -202,6 +205,14 @@ const Profile = () => {
                         <TabsTrigger value="builds" className="gap-1.5 text-xs">
                             <Cpu className="w-3.5 h-3.5" /> My Builds
                         </TabsTrigger>
+                        <TabsTrigger value="wishlist" className="gap-1.5 text-xs">
+        <Heart className="w-3.5 h-3.5" /> Wishlist
+        {favorites.length > 0 && (
+            <span className="ml-1 bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
+                {favorites.length}
+            </span>
+        )}
+    </TabsTrigger>
                     </TabsList>
                     <TabsContent value="builds" className="mt-4">
                         {buildsLoading ? (
@@ -252,6 +263,59 @@ const Profile = () => {
                             </div>
                         )}
                     </TabsContent>
+                    <TabsContent value="wishlist" className="mt-4">
+    {favoritesLoading ? (
+        <p className="text-sm text-muted-foreground text-center py-10">Loading wishlist...</p>
+    ) : favorites.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center py-16 border border-dashed border-border rounded-xl">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                <Heart className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-foreground font-medium">Your wishlist is empty</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">
+                Tap the heart icon on any component to save it here.
+            </p>
+            <Button asChild size="sm">
+                <Link to="/marketplace">Browse parts</Link>
+            </Button>
+        </div>
+    ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {favorites.map((item, i) => (
+                <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.06 }}
+                >
+                    <Link to={`/marketplace/${item.id}`}>
+                        <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative">
+                            <div className="absolute top-2 right-2 z-10">
+                                <FavoriteButton componentId={item.id} />
+                            </div>
+                            <div className="aspect-square overflow-hidden bg-muted">
+                                <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    loading="lazy"
+                                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                                />
+                            </div>
+                            <div className="p-3">
+                                <Badge variant="secondary" className="text-[10px] mb-1.5">{item.type}</Badge>
+                                <h3 className="text-sm font-heading font-semibold text-foreground truncate">{item.name}</h3>
+                                <p className="text-xs text-muted-foreground mb-1">{item.brand}</p>
+                                <span className="text-sm font-heading font-bold gradient-text">
+                                    {item.price ? `$${item.price}` : 'Price unavailable'}
+                                </span>
+                            </div>
+                        </Card>
+                    </Link>
+                </motion.div>
+            ))}
+        </div>
+    )}
+</TabsContent>
                 </Tabs>
             </motion.div>
 

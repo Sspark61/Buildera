@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, ShoppingBag, Wrench, Bookmark, MoreHorizontal, User, Settings, LogIn } from "lucide-react";
+import { Home, ShoppingBag, Wrench, MoreHorizontal, User, Settings, LogIn } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const tabs = [
     { to: "/", label: "Home", icon: Home },
     { to: "/marketplace", label: "Market", icon: ShoppingBag },
     { to: "/builder", label: "Builder", icon: Wrench },
-    { to: "/saved", label: "Saved", icon: Bookmark },
 ];
 
 const moreItems = [
