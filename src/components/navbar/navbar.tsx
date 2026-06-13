@@ -59,14 +59,14 @@ export function AppSidebar() {
                         <img
                             src={theme === 'dark' ? builderaLogo : builderalight}
                             alt="Buildera logo"
-                            className={`${collapsed ? "w-7 h-7" : "w-50 h-8"} rounded-lg shrink-0 object-contain`}
+                            className={`${collapsed ? "w-7 h-7" : "w-50 h-14"} rounded-lg shrink-0 object-contain`}
                         />
                     )}
                     {collapsed && (
                         <img
                             src={smallLogo}
                             alt="Buildera logo"
-                            className={`${collapsed ? "w-7 h-7" : "w-50 h-8"} rounded-lg shrink-0 object-contain`}
+                            className={`${collapsed ? "w-7 h-7" : "w-50 h-14"} rounded-lg shrink-0 object-contain`}
                         />
                     )}
 
