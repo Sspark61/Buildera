@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import FavoriteButton from "@/components/favoritebutton/favoriteButton";
 import { useGetComponentDetails } from '../../hooks/use-componentDetails'
 import { useEffect, useState } from "react";
 import {
@@ -357,6 +358,7 @@ const ProductDetail = () => {
                             >
                                 <Plus className="w-4 h-4" /> Add to Build
                             </Button>
+                            <FavoriteButton componentId={product.id} className="w-12 h-12 rounded-lg" />
                         </div>
                     </div>
                 </div>
