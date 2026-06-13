@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import {api} from '../api/api'
+import { api } from '../api/api'
 
 interface ResetPasswordCredentials {
     token: string
@@ -12,12 +12,15 @@ interface ResetPasswordResponse {
     message: string
 }
 
-export const useResetPassword = ()=>{
+export const useResetPassword = () => {
     return useMutation({
-        mutationFn: ({token, password, cPassword}: ResetPasswordCredentials)=>
-        api(`/auth/reset-password/${token}`, {
-            method: 'POST',
-            body: JSON.stringify({password,cPassword}),
-        }) as Promise<ResetPasswordResponse>,
+        mutationFn: ({ token, password, cPassword }: ResetPasswordCredentials) =>
+            api(`/auth/reset-password/${encodeURIComponent(token)}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ password, cPassword }),
+            }) as Promise<ResetPasswordResponse>,
     })
 }
