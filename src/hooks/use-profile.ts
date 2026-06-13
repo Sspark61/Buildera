@@ -7,7 +7,7 @@ interface ProfileResponse {
         id: number
         userName: string
         email: string
-        phone: string
+        password: string
         role: string
         isConfirmed: boolean
         isDeleted: boolean
@@ -27,10 +27,6 @@ export const useGetProfile = () => {
 
 interface UpdateProfileBody {
     userName: string
-    phone: string
-    currentPassword: string
-    password: string
-    cPassword: string
 }
 
 export const useUpdateProfile = () => {
