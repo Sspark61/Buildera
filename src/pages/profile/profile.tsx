@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
-import { Camera, Mail, Phone, Calendar, Cpu, Edit, X, Shield, Save, Trash2, Heart, Loader2 } from "lucide-react";
+import { Camera, Mail, Calendar, Cpu, Edit, X, Shield, Save, Trash2, Heart, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ const Profile = () => {
     const { data: favoritesData, isLoading: favoritesLoading } = useGetFavorites()
     const favorites = favoritesData?.data ?? []
     const queryClient = useQueryClient()
-    
+
     // File input DOM reference
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -60,10 +60,6 @@ const Profile = () => {
     const [updateError, setUpdateError] = useState('')
     const [draft, setDraft] = useState({
         userName: '',
-        phone: '',
-        currentPassword: '',
-        password: '',
-        cPassword: '',
     })
 
     const profile = data?.data
@@ -84,10 +80,6 @@ const Profile = () => {
     const openEdit = () => {
         setDraft({
             userName: profile?.userName ?? '',
-            phone: profile?.phone ?? '',
-            currentPassword: '',
-            password: '',
-            cPassword: '',
         })
         setUpdateError('')
         setIsEditing(true)
@@ -152,12 +144,12 @@ const Profile = () => {
     return (
         <div className="p-4 lg:p-8 space-y-6 max-w-6xl mx-auto">
             {/* Hidden native input handler */}
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                className="hidden" 
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
             />
 
             {/* Profile header */}
@@ -213,9 +205,6 @@ const Profile = () => {
                                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1.5 mt-4 text-xs text-muted-foreground">
                                     <span className="inline-flex items-center gap-1.5">
                                         <Mail className="w-3.5 h-3.5" /> {profile.email}
-                                    </span>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Phone className="w-3.5 h-3.5" /> {profile.phone}
                                     </span>
                                     <span className="inline-flex items-center gap-1.5">
                                         <Calendar className="w-3.5 h-3.5" /> Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
@@ -360,7 +349,7 @@ const Profile = () => {
                     <DialogHeader>
                         <DialogTitle>Edit profile</DialogTitle>
                         <DialogDescription>
-                            Update your username, phone, or password.
+                            Update your username, phone.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
@@ -369,40 +358,6 @@ const Profile = () => {
                             <Input
                                 value={draft.userName}
                                 onChange={(e) => setDraft(prev => ({ ...prev, userName: e.target.value }))}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Phone</Label>
-                            <Input
-                                value={draft.phone}
-                                onChange={(e) => setDraft(prev => ({ ...prev, phone: e.target.value }))}
-                            />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                            <Label className="text-xs text-muted-foreground">Current password</Label>
-                            <Input
-                                type="password"
-                                placeholder="Enter current password"
-                                value={draft.currentPassword}
-                                onChange={(e) => setDraft(prev => ({ ...prev, currentPassword: e.target.value }))}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">New password</Label>
-                            <Input
-                                type="password"
-                                placeholder="Enter new password"
-                                value={draft.password}
-                                onChange={(e) => setDraft(prev => ({ ...prev, password: e.target.value }))}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground">Confirm new password</Label>
-                            <Input
-                                type="password"
-                                placeholder="Confirm new password"
-                                value={draft.cPassword}
-                                onChange={(e) => setDraft(prev => ({ ...prev, cPassword: e.target.value }))}
                             />
                         </div>
                     </div>
