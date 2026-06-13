@@ -35,7 +35,10 @@ export default function Login() {
                         initialValues={{ email: '', password: '' }}
                         validate={values => {
                             setLoginError('')
-                            const errors: any = {};
+                            const errors: {
+                                email?: string;
+                                password?: string;
+                            } = {};
                             if (!values.email) {
                                 errors.email = '*This field is required';
                             } else if (
