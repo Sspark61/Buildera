@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, ShoppingBag, Bookmark, Settings, LogIn, LogOut, User, Wrench } from "lucide-react";
+import { Home, ShoppingBag, Settings, LogIn, LogOut, User, Wrench } from "lucide-react";
 import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
 import smallLogo from "@/assets/images/buildera-new-logo-small.png";
@@ -22,7 +22,6 @@ const mainLinks = [
     { to: "/", label: "Home", icon: Home },
     { to: "/marketplace", label: "Marketplace", icon: ShoppingBag },
     { to: "/builder", label: "PC Builder", icon: Wrench },
-    { to: "/saved", label: "Saved Builds", icon: Bookmark },
 ];
 
 
