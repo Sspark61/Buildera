@@ -25,7 +25,7 @@ export default function Signup() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2 mb-4'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
+                <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
                 <h3 className='text-xl font-heading'>Create your account</h3>
                 <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
                 <div>
