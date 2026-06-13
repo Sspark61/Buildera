@@ -1,12 +1,257 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Plus } from "lucide-react";
+import { ArrowLeft, Check, Plus, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useGetComponentDetails } from '../../hooks/use-componentDetails'
+import { useEffect, useState } from "react";
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ReferenceLine,
+    ResponsiveContainer,
+    Legend,
+} from "recharts"
 
+// ---- Price History Hook ----
+interface PricePoint {
+    date: string
+    price: number
+    predicted?: number
+}
 
+const usePriceHistory = (name: string) => {
+    const [data, setData] = useState<PricePoint[]>([])
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    
+
+    useEffect(() => {
+        if (!name) return
+
+        console.log('Fetching price history for:', name)
+        console.log('URL:', `https://data-gqlk.vercel.app/api/prediction?name=${encodeURIComponent(name)}`)
+
+        setIsLoading(true)
+        fetch(`https://data-gqlk.vercel.app/api/prediction?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(json => {
+                console.log('Price API response:', json)
+                const raw: [number, number][] = json?.data?.[0]?.data ?? []
+                console.log('Raw data points:', raw.length)
+                if (!raw.length) return
+
+                const PREDICTION_COUNT = 7
+                const splitIndex = raw.length - PREDICTION_COUNT
+
+                const formatted: PricePoint[] = raw.map(([timestamp, price], i) => ({
+                    date: new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    price: i < splitIndex ? price : undefined as any,
+                    predicted: i >= splitIndex ? price : undefined as any,
+                }))
+
+                // make the last history point connect to first prediction
+                if (splitIndex > 0) {
+                    formatted[splitIndex - 1].predicted = formatted[splitIndex - 1].price
+                }
+
+                setData(formatted)
+            })
+            .catch(() => setError('Failed to load price history'))
+            .finally(() => setIsLoading(false))
+    }, [name])
+
+    return { data, isLoading, error }
+}
+
+// ---- Custom Tooltip ----
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    const value = payload[0]?.value
+    const isPredicted = payload[0]?.dataKey === 'predicted'
+    return (
+        <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl">
+            <p className="text-[11px] text-muted-foreground mb-1">{label}</p>
+            <div className="flex items-center gap-2">
+                <span className="text-sm font-heading font-bold text-foreground">${value}</span>
+                {isPredicted && (
+                    <Badge className="text-[10px] h-4 px-1.5 bg-primary/20 text-primary border-0">
+                        forecast
+                    </Badge>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ---- Price Chart ----
+const PriceHistoryChart = ({ name }: { name: string }) => {
+    const { data, isLoading, error } = usePriceHistory(name)
+
+    if (isLoading) return (
+        <Card className="bg-card border-border p-8 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">Loading price history...</p>
+        </Card>
+    )
+
+    if (error || !data.length) return (
+        <Card className="bg-card border-border p-8 flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">Price history unavailable.</p>
+        </Card>
+    )
+
+    const predictionStartIndex = data.findIndex(d => d.predicted !== undefined && d.price === undefined)
+    const predictionStartDate = predictionStartIndex > 0 ? data[predictionStartIndex]?.date : null
+    const displayData = data.slice(-37)
+
+    const allPrices = data.flatMap(d => [d.price, d.predicted].filter(Boolean)) as number[]
+    const minPrice = Math.min(...allPrices)
+    const maxPrice = Math.max(...allPrices)
+    const padding = (maxPrice - minPrice) * 0.15
+
+    // find current price and predicted price for summary
+    const currentPrice = [...data].reverse().find(d => d.price)?.price
+    const lastPredicted = [...data].reverse().find(d => d.predicted)?.predicted
+    const priceDiff = lastPredicted && currentPrice ? lastPredicted - currentPrice : null
+    const isUp = priceDiff !== null && priceDiff >= 0
+
+    return (
+        <Card className="bg-card border-border overflow-hidden">
+            {/* Header */}
+            <div className="p-5 border-b border-border">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-primary" />
+                        <h2 className="text-sm font-heading font-semibold text-foreground">
+                            Price History & Forecast
+                        </h2>
+                    </div>
+                    {/* Summary pills */}
+                    <div className="flex items-center gap-3">
+                        {currentPrice && (
+                            <div className="text-center">
+                                <p className="text-[10px] text-muted-foreground">Current</p>
+                                <p className="text-sm font-heading font-bold text-foreground">${currentPrice}</p>
+                            </div>
+                        )}
+                        {lastPredicted && (
+                            <div className="text-center">
+                                <p className="text-[10px] text-muted-foreground">7-day forecast</p>
+                                <p className={`text-sm font-heading font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+                                    ${lastPredicted}
+                                </p>
+                            </div>
+                        )}
+                        {priceDiff !== null && (
+                            <div className={`px-2 py-1 rounded-md text-xs font-medium ${isUp ? 'bg-green-400/10 text-green-400' : 'bg-red-400/10 text-red-400'}`}>
+                                {isUp ? '▲' : '▼'} ${Math.abs(priceDiff).toFixed(0)}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 mt-3">
+                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="w-6 h-0.5 bg-primary inline-block rounded-full" />
+                        Historical
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="w-6 h-px border-t-2 border-dashed border-primary/60 inline-block" />
+                        7-day forecast
+                    </span>
+                </div>
+            </div>
+
+            {/* Chart */}
+            <div className="p-4 pt-6">
+                <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={displayData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.02} />
+                            </linearGradient>
+                            <linearGradient id="colorPredicted" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.02} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="rgba(255,255,255,0.06)"
+                            vertical={false}
+                        />
+                        <XAxis
+                            dataKey="date"
+                            tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.4)', fontFamily: 'inherit' }}
+                            tickLine={false}
+                            axisLine={false}
+                            interval="preserveStartEnd"
+                            dy={8}
+                        />
+                        <YAxis
+                            domain={[minPrice - padding, maxPrice + padding]}
+                            tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.4)', fontFamily: 'inherit' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(v) => `$${Math.round(v)}`}
+                            width={60}
+                        />
+                        <Tooltip
+                            content={<CustomTooltip />}
+                            cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+                        />
+                        {predictionStartDate && (
+                            <ReferenceLine
+                                x={predictionStartDate}
+                                stroke="rgba(255,255,255,0.2)"
+                                strokeDasharray="4 4"
+                                label={{
+                                    value: '← History  |  Forecast →',
+                                    position: 'top',
+                                    fontSize: 10,
+                                    fill: 'rgba(255,255,255,0.35)',
+                                    fontFamily: 'inherit',
+                                }}
+                            />
+                        )}
+                        <Area
+                            type="monotone"
+                            dataKey="price"
+                            stroke="hsl(217, 91%, 60%)"
+                            strokeWidth={2.5}
+                            fill="url(#colorPrice)"
+                            dot={false}
+                            connectNulls={false}
+                            activeDot={{ r: 4, fill: 'hsl(217, 91%, 60%)', stroke: 'white', strokeWidth: 2 }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="predicted"
+                            stroke="hsl(217, 91%, 60%)"
+                            strokeWidth={2}
+                            strokeDasharray="6 4"
+                            strokeOpacity={0.6}
+                            fill="url(#colorPredicted)"
+                            dot={false}
+                            connectNulls={false}
+                            activeDot={{ r: 4, fill: 'hsl(217, 91%, 60%)', stroke: 'white', strokeWidth: 2 }}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </Card>
+    )
+}
+
+// ---- Main Page ----
 const ProductDetail = () => {
     const { id } = useParams()
     const { data, isLoading, error } = useGetComponentDetails(Number(id))
@@ -18,7 +263,7 @@ const ProductDetail = () => {
             <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
     )
-    
+
     if (error) return (
         <div className="p-6 lg:p-10 max-w-2xl mx-auto">
             <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
@@ -33,23 +278,21 @@ const ProductDetail = () => {
         </div>
     )
 
-    if (!product) {
-        return (
-            <div className="p-6 lg:p-10 max-w-2xl mx-auto">
-                <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
-                    Product not found
-                </h1>
-                <p className="text-muted-foreground mb-6">
-                    We couldn't find the product you're looking for.
-                </p>
-                <Button asChild>
-                    <Link to="/marketplace">
-                        <ArrowLeft className="w-4 h-4" /> Back to Marketplace
-                    </Link>
-                </Button>
-            </div>
-        );
-    }
+    if (!product) return (
+        <div className="p-6 lg:p-10 max-w-2xl mx-auto">
+            <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
+                Product not found
+            </h1>
+            <p className="text-muted-foreground mb-6">
+                We couldn't find the product you're looking for.
+            </p>
+            <Button asChild>
+                <Link to="/marketplace">
+                    <ArrowLeft className="w-4 h-4" /> Back to Marketplace
+                </Link>
+            </Button>
+        </div>
+    )
 
     return (
         <div className="p-4 lg:p-8 max-w-6xl mx-auto">
@@ -64,6 +307,7 @@ const ProductDetail = () => {
                         <ArrowLeft className="w-4 h-4" /> Marketplace
                     </Link>
                 </Button>
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
                     <Card className="bg-card border-border overflow-hidden -py-4">
                         <div className="aspect-square overflow-hidden">
@@ -97,7 +341,7 @@ const ProductDetail = () => {
                                 Key Specs
                             </h2>
                             <ul className="space-y-2">
-                                {Object.entries(product.specs).slice(0, 5).map(([key, value]) => (  // 👈 slice to show only first 5
+                                {Object.entries(product.specs).slice(0, 5).map(([key, value]) => (
                                     <li key={key} className="flex items-start gap-2 text-sm text-foreground">
                                         <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                                         <span><span className="text-muted-foreground">{key}:</span> {value}</span>
@@ -116,6 +360,8 @@ const ProductDetail = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Specs table */}
                 <div className="mt-10">
                     <h2 className="text-lg font-heading font-semibold text-foreground mb-4">
                         Specifications
@@ -123,10 +369,7 @@ const ProductDetail = () => {
                     <Card className="bg-card border-border overflow-hidden -py-4">
                         <div className="divide-y divide-border">
                             {Object.entries(product.specs).map(([key, value]) => (
-                                <div
-                                    key={key}
-                                    className="grid grid-cols-2 px-4 py-3 text-sm"
-                                >
+                                <div key={key} className="grid grid-cols-2 px-4 py-3 text-sm">
                                     <span className="text-muted-foreground">{key}</span>
                                     <span className="text-foreground font-medium">{value}</span>
                                 </div>
@@ -134,6 +377,15 @@ const ProductDetail = () => {
                         </div>
                     </Card>
                 </div>
+
+                {/* Price history chart */}
+                <div className="mt-10">
+                    <h2 className="text-lg font-heading font-semibold text-foreground mb-4">
+                        Price History
+                    </h2>
+                    <PriceHistoryChart name={product.name} />
+                </div>
+
             </motion.div>
         </div>
     );
