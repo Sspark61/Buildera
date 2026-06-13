@@ -33,7 +33,12 @@ export default function Signup() {
                         initialValues={{ userName: '', email: '', password: '', cPassword: '' }}
                         validate={values => {
                             setSignupError('')
-                            const errors = {};
+                            const errors: {
+                                userName?: string;
+                                email?: string;
+                                password?: string;
+                                cPassword?: string;
+                            } = {};
                             if (!values.userName) {
                                 errors.userName = '*This field is required';
                             }
