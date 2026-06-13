@@ -33,7 +33,6 @@ export function AppSidebar() {
     const token = localStorage.getItem('token');
     const { theme } = useTheme();
     const username = localStorage.getItem('userName')
-    const image = localStorage.getItem('imageUrl')
 
     const bottomLinks = [
         username ?
