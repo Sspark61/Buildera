@@ -133,23 +133,6 @@ export default function Settings() {
                     </FieldGroup >
                 </div >
             </div >
-            {/* Logout */}
-            < div className={`flex items-center gap-x-2 rounded-lg border text-card-foreground shadow-sm ${token ? "bg-destructive/5 border-destructive/20"
-                : "bg-green-500/5 border-green-500/20"} p-4`} >
-                <div className="flex justify-between items-center w-full">
-                    <div>
-                        <h3 className={`${token ? "text-destructive" : "text-green-500"} text-sm text-bold font-heading`}>{token ? "Log Out" : "Log In"}</h3>
-                        <p className='text-xs text-muted-foreground'>{token ? "Sign out of your account" : "Sign in to your account"}</p>
-                    </div>
-                    <Button size="sm" variant="destructive" className={`cursor-pointer font-heading bg-background border hover:text-accent-foreground ${token
-                        ? "text-destructive border-destructive/30 hover:bg-destructive/10"
-                        : "text-green-500 border-green-500/40 hover:bg-green-500/10"
-                        }`}>
-                        <Icon className="w-4 h-4" />
-                        <a onClick={() => token ? signOut() : window.location.href = '/login'} className='hidden sm:block'>{token ? "Log Out" : "Log In"}</a>
-                    </Button >
-                </div >
-            </div >
             {/* Save */}
 
             <Button onClick={() => setTheme(pendingTheme)} size="lg" variant="outline" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:text-primary-foreground! disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-10 px-4 py-2 gradient-primary neon-glow text-primary-foreground font-semibold w-full " >
