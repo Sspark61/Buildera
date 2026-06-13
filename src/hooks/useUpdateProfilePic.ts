@@ -1,9 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import {api} from '../api/api'
 
-interface UpdatePictureRequest {
-    image: string
-}
+
 interface UpdatePictureResponse {
     success: boolean
     data: {
