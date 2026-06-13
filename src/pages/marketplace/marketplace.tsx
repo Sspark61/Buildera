@@ -16,6 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
+import FavoriteButton from "@/components/favoritebutton/favoriteButton"
 import { useGetComponents } from "@/hooks/use-components";
 
 type ViewMode = "grid" | "list";
@@ -248,6 +249,9 @@ const Marketplace = () => {
                             >
                                 <Link to={`/marketplace/${product.id}`} className="block">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative">
+                                        <div className="absolute top-2 right-2 z-10">
+                                            <FavoriteButton componentId={product.id} />
+                                        </div>
                                         <div className="aspect-square overflow-hidden -m-4">
                                             <img
                                                 src={product.imageUrl}
@@ -283,6 +287,9 @@ const Marketplace = () => {
                                 <Link to={`/marketplace/${product.id}`} className="block">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer">
                                         <div className="flex gap-4 p-3">
+                                            <div className="absolute top-2 right-2 z-10">
+                                                <FavoriteButton componentId={product.id} />
+                                            </div>
                                             <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
                                                 <img
                                                     src={product.imageUrl}
