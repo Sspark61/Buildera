@@ -251,11 +251,11 @@ const PriceHistoryChart = ({ name }: { name: string }) => {
 
 // 💻 ---- Retailers Dynamic Registry Map ----
 const RETAILER_REGISTRY: Record<string, { name: string; initial: string; bg: string; text: string }> = {
-    "nvidia.com":      { name: "NVIDIA Store", initial: "NS", bg: "bg-[#76B900]", text: "text-white" },
-    "amazon.com":      { name: "Amazon",       initial: "A",  bg: "bg-[#FF9900]", text: "text-black font-bold" },
-    "newegg.com":      { name: "Newegg",       initial: "N",  bg: "bg-[#F5A623]", text: "text-white" },
-    "microcenter.com": { name: "Micro Center",  initial: "MC", bg: "bg-[#E01A22]", text: "text-white" },
-    "bhphotovideo.com":{ name: "B&H Photo",    initial: "BP", bg: "bg-[#000000]", text: "text-white border border-border/40" },
+    "nvidia.com": { name: "NVIDIA Store", initial: "NS", bg: "bg-[#76B900]", text: "text-white" },
+    "amazon.com": { name: "Amazon", initial: "A", bg: "bg-[#FF9900]", text: "text-black font-bold" },
+    "newegg.com": { name: "Newegg", initial: "N", bg: "bg-[#F5A623]", text: "text-white" },
+    "microcenter.com": { name: "Micro Center", initial: "MC", bg: "bg-[#E01A22]", text: "text-white" },
+    "bhphotovideo.com": { name: "B&H Photo", initial: "BP", bg: "bg-[#000000]", text: "text-white border border-border/40" },
 };
 
 const getStoreMetaFromUrl = (urlStr: string) => {
@@ -296,7 +296,7 @@ export const WhereToBuy = ({ urls, currentPrice }: { urls: string[]; currentPric
                 </h3>
                 <p className="text-xs text-muted-foreground">
                     Buildera doesn't sell products directly. Compare prices from trusted retailers below.
-                </p>    
+                </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -316,7 +316,7 @@ export const WhereToBuy = ({ urls, currentPrice }: { urls: string[]; currentPric
                                 <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${meta.bg} ${meta.text} text-xs font-semibold`}>
                                     {meta.initial}
                                 </div>
-                                
+
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-heading font-semibold text-foreground truncate select-none capitalize">
@@ -461,10 +461,16 @@ const ProductDetail = () => {
                             </Button>
 
                             {/* Full Width Add to Favorites Button Wrapper */}
-                            <div className="w-full h-12 rounded-md border border-border bg-card text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-3 font-heading font-semibold text-sm shadow-sm relative">
+                            <div
+                                className="w-full h-12 rounded-md border border-border bg-card text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-3 font-heading font-semibold text-sm shadow-sm relative cursor-pointer"
+                                onClick={(e) => {
+                                    const btn = e.currentTarget.querySelector("button");
+                                    if (btn) btn.click();
+                                }}
+                            >
                                 <FavoriteButton
                                     componentId={product.id}
-                                    className="bg-transparent hover:bg-transparent border-0 shadow-none h-full !w-auto px-0 flex items-center justify-center"
+                                    className="bg-transparent hover:bg-transparent border-0 shadow-none h-full !w-auto px-0 flex items-center justify-center pointer-events-none"
                                 />
                                 <span className="text-sm font-heading font-semibold select-none pointer-events-none">
                                     Add to Favorites
@@ -474,8 +480,7 @@ const ProductDetail = () => {
                     </div>
                 </div>
 
-                {/* 💻 WHERE TO BUY LINKS (Renders dynamically directly beneath top split block) */}
-                <WhereToBuy urls={product.urls} currentPrice={product.price}/>
+                <WhereToBuy urls={product.urls} currentPrice={product.price} />
 
                 {/* Specs table */}
                 <div className="mt-10">
