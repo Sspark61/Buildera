@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
-import { motion } from "framer-motion";
 import {
     Monitor, Cpu, CircuitBoard, MemoryStick, HardDrive, Zap, Fan, Box,
     Plus, FileDown, Sparkles, Trash2, Search, Check, Receipt,
@@ -363,7 +362,7 @@ const BuildTips = ({
 }
 
 // ---- AI Build Panel ----
-const AIBuildPanel = ({ onApplyBuild: _onApplyBuild }: { onApplyBuild: (b: Record<string, ApiComponent>) => void }) => {
+const AIBuildPanel = ({ onApplyBuild: _onApplyBuild}: {onApplyBuild: (b: Record<string, ApiComponent>) => void}) => {
     const [needs, setNeeds] = useState("")
     const [budget, setBudget] = useState("")
 
@@ -478,7 +477,6 @@ const Builder = () => {
     const [buildPurpose, setBuildPurpose] = useState("Gaming")
     const [budget, setBudget] = useState("")
     const [activeBuildId, setActiveBuildId] = useState<number | null>(null)
-    const [isSaved, setIsSaved] = useState(false)
     const [isAddingComponent, setIsAddingComponent] = useState(false)
     const [isLocalSaving, setIsLocalSaving] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
@@ -496,7 +494,6 @@ const Builder = () => {
         setBuildPurpose(b.purpose ?? "Gaming")
         setBudget(b.budget ? String(b.budget) : "")
         setActiveBuildId(b.id)
-        setIsSaved(true)
 
         if (b.components?.length) {
             const mapped: Record<string, ApiComponent> = {}
@@ -542,7 +539,7 @@ const Builder = () => {
                 body: JSON.stringify(payload), // 🎯 Key is completely omitted if blank
             })
                 .then(() => {
-                    setIsSaved(true);
+                    // Success
                 })
                 .catch((err) => {
                     console.error("Failed to auto-save build details:", err);
@@ -565,7 +562,6 @@ const Builder = () => {
 
         setIsAddingComponent(true)
         setCompatibilityErrors([])
-        setIsSaved(false)
 
         let currentBuildId = activeBuildId;
         const existing = selections[activeCategory.key]
@@ -617,7 +613,6 @@ const Builder = () => {
             // Step 4: Complete Success Handler
             await syncBuildSelections(currentBuildId!, setSelections)
             setCompatibilityErrors([])
-            setIsSaved(true)
 
         } catch (err: any) {
             console.error("Caught rich validation error:", err);
@@ -686,7 +681,6 @@ const Builder = () => {
         setBuildPurpose("Gaming")
         setBudget("")
         setActiveBuildId(null)
-        setIsSaved(false)
         setCompatibilityErrors([])
         setSeeded(false)
     }
@@ -717,21 +711,21 @@ const Builder = () => {
                     <div className="flex-1 min-w-0 space-y-2">
                         <Input
                             value={buildName}
-                            onChange={(e) => { setBuildName(e.target.value); setIsSaved(false) }}
+                            onChange={(e) => { setBuildName(e.target.value) }}
                             className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md"
                         />
                         <div className="flex gap-2 flex-wrap">
                             <Input
                                 placeholder="Purpose (e.g. Gaming)"
                                 value={buildPurpose}
-                                onChange={(e) => { setBuildPurpose(e.target.value); setIsSaved(false) }}
+                                onChange={(e) => { setBuildPurpose(e.target.value) }}
                                 className="text-xs bg-muted/30 border-border h-7 w-40"
                             />
                             <Input
                                 type="number"
                                 placeholder="Budget ($)"
                                 value={budget}
-                                onChange={(e) => { setBudget(e.target.value); setIsSaved(false) }}
+                                onChange={(e) => { setBudget(e.target.value) }}
                                 className="text-xs bg-muted/30 border-border h-7 w-32"
                             />
                         </div>
