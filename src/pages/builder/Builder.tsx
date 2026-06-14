@@ -1,8 +1,4 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/immutability */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
 import {
@@ -32,6 +28,7 @@ import {
 import { componentCategories } from "@/assets/data/pcComponents";
 import type { ComponentCategory } from "@/assets/data/pcComponents";
 import { useGetComponents } from "@/hooks/use-components";
+import { useGetComponentDetails } from '../../hooks/use-componentDetails'
 import {
     useGetBuild,
     useCreateBuild,
@@ -88,6 +85,9 @@ const ComponentBrowser = ({
     const [search, setSearch] = useState("")
     const [debouncedSearch, setDebouncedSearch] = useState("")
     const [page, setPage] = useState(1)
+    
+    // 💡 Keeps track of which list item is currently showing its specs inline
+    const [expandedComponentId, setExpandedComponentId] = useState<number | null>(null)
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(search), 400)
@@ -122,49 +122,64 @@ const ComponentBrowser = ({
                             placeholder={`Search ${category.label.toLowerCase()}...`}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 bg-muted/30 border-border "
+                            className="pl-9 bg-muted/30 border-border"
                         />
                     </div>
+                    
                     <div className="space-y-2 mt-2">
                         {isLoading ? (
                             <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
                         ) : components.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">No components found.</p>
-                        ) : components.map((c) => {
+                        ) : components.map((c: any) => {
                             const isSelected = selectedId === c.id
+                            const isExpanded = expandedComponentId === c.id
+
                             return (
-                                <button
-                                    key={c.id}
-                                    onClick={() => { onSelect(c); onOpenChange(false) }}
-                                    className={`text-left p-3 rounded-lg border transition-all flex items-center gap-3 w-[92%] mx-auto ${isSelected
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
-                                        }`}
+                                <div 
+                                    key={c.id} 
+                                    className="w-[92%] mx-auto border border-border rounded-lg bg-card overflow-hidden transition-all"
+                                    onMouseEnter={() => setExpandedComponentId(c.id)}
+                                    onMouseLeave={() => setExpandedComponentId(null)}
                                 >
-                                    <img
-                                        src={c.imageUrl}
-                                        alt={c.name}
-                                        loading="lazy"
-                                        className="w-14 h-14 rounded-md object-cover bg-muted shrink-0"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h4 className="text-sm font-heading font-semibold text-foreground truncate">
-                                                {c.name}
-                                            </h4>
-                                            {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                    <button
+                                        onClick={() => { onSelect(c); onOpenChange(false) }}
+                                        className={`text-left p-3 transition-all flex items-center gap-3 w-full ${
+                                            isSelected ? "bg-primary/5 border-b border-primary/20" : "hover:bg-muted/20"
+                                        }`}
+                                    >
+                                        <img
+                                            src={c.imageUrl}
+                                            alt={c.name}
+                                            loading="lazy"
+                                            className="w-14 h-14 rounded-md object-cover bg-muted shrink-0"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="text-sm font-heading font-semibold text-foreground truncate">
+                                                    {c.name}
+                                                </h4>
+                                                {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                                            </div>
+                                            <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-border text-muted-foreground">
+                                                {c.brand}
+                                            </Badge>
                                         </div>
-                                        <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-border text-muted-foreground">
-                                            {c.brand}
-                                        </Badge>
-                                    </div>
-                                    <span className="text-sm font-heading font-bold gradient-text shrink-0">
-                                        {c.price ? `$${c.price}` : 'N/A'}
-                                    </span>
-                                </button>
+                                        <span className="text-sm font-heading font-bold gradient-text shrink-0">
+                                            {c.price ? `$${c.price}` : 'N/A'}
+                                        </span>
+                                    </button>
+
+                                    {isExpanded && (
+                                        <div className="bg-muted/30 border-t border-border/40 p-3">
+                                            <InlineSpecsFetcher componentId={c.id} defaultBrand={c.brand} defaultType={c.type} />
+                                        </div>
+                                    )}
+                                </div>
                             )
                         })}
                     </div>
+                    
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 pt-2">
                             <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
@@ -181,6 +196,54 @@ const ComponentBrowser = ({
         </Sheet>
     )
 }
+
+// ---- InlineSpecsFetcher ----
+const InlineSpecsFetcher = ({ 
+    componentId, defaultBrand, defaultType 
+}: { 
+    componentId: number; 
+    defaultBrand: string; 
+    defaultType: string;
+}) => {
+    const { data, isLoading } = useGetComponentDetails(componentId);
+    const detailedSpecs = data?.data?.specs;
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-3 text-xs text-muted-foreground gap-2">
+                <span className="animate-spin rounded-full h-3 w-3 border-b border-primary"></span>
+                Loading specifications...
+            </div>
+        );
+    }
+
+    if (!detailedSpecs) {
+        return (
+            <div className="space-y-1 text-[11px] text-muted-foreground">
+                <div className="flex justify-between"><span>Brand:</span><span className="text-foreground">{defaultBrand}</span></div>
+                <div className="flex justify-between"><span>Type:</span><span className="text-foreground">{defaultType}</span></div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-1 text-[11px] max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+            {Object.entries(detailedSpecs)
+                .filter(([_, val]) => val !== null && val !== undefined && val !== '')
+                .map(([key, val]) => (
+                    <div key={key} className="flex justify-between items-start gap-4 py-0.5 border-b border-border/10 last:border-0">
+                        <span className="text-muted-foreground truncate max-w-[140px]">
+                            {key.replace(/_/g, ' ')}
+                        </span>
+                        <span className="font-medium text-foreground text-right break-all max-w-[160px]">
+                            {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val)}
+                        </span>
+                    </div>
+                ))
+            }
+        </div>
+    );
+};
 
 // ---- BuildSummary ----
 const BuildSummary = ({
@@ -368,7 +431,7 @@ const syncBuildSelections = async (
                 brand: c.brand,
                 price: c.price,
                 imageUrl: c.imageUrl,
-                buildComponentId: c.buildComponentId, 
+                buildComponentId: c.buildComponentId,
             }
         }
     })
@@ -435,7 +498,7 @@ const Builder = () => {
                         brand: c.brand,
                         price: c.price,
                         imageUrl: c.imageUrl,
-                        buildComponentId: c.buildComponentId, 
+                        buildComponentId: c.buildComponentId,
                     }
                 }
             })
@@ -629,9 +692,9 @@ const Builder = () => {
     }
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
-    
+
     // 👈 Combine with our local hook to keep UI synchronized perfectly
-    const isSaving = isCreating || isAddingComponent || isLocalSaving 
+    const isSaving = isCreating || isAddingComponent || isLocalSaving
 
     if (existingBuildId && isBuildLoading) {
         return (
@@ -726,10 +789,18 @@ const Builder = () => {
                                 </Card>
 
                                 {componentCategories.map((cat, i) => {
-                                    const selected = selections[cat.key]
-                                    const Icon = iconMap[cat.key] || Box
+                                    // 💡 BUG FIX: Normalize the category key to lowercase to match the selection dictionary keys perfectly
+                                    const categoryKey = cat.key.toLowerCase();
+                                    const selected = selections[categoryKey];
+                                    const Icon = iconMap[categoryKey] || Box;
+
                                     return (
-                                        <motion.div key={cat.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                                        <motion.div
+                                            key={cat.key}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.04 }}
+                                        >
                                             <Card className={`p-3 sm:p-4 border transition-all ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"}`}>
                                                 <div className="flex items-center gap-2 sm:gap-3">
                                                     <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"}`}>
@@ -753,7 +824,10 @@ const Builder = () => {
                                                     )}
                                                     <div className="flex items-center gap-0.5 shrink-0">
                                                         {selected && (
-                                                            <Button variant="ghost" size="icon" onClick={() => removeSelection(cat.key)}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => removeSelection(categoryKey)}
                                                                 className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                                                                 disabled={isAddingComponent}
                                                             >
@@ -763,7 +837,8 @@ const Builder = () => {
                                                         <Button
                                                             variant={selected ? "outline" : "default"}
                                                             size="sm"
-                                                            onClick={() => openBrowser(cat)}
+                                                            // 💡 Pass the updated data target reference down to initialization wrapper
+                                                            onClick={() => openBrowser({ ...cat, key: categoryKey })}
                                                             disabled={isAddingComponent}
                                                             className={selected
                                                                 ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3"
