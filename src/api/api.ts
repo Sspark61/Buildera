@@ -19,13 +19,19 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
 
     if (!res.ok) {
         let errorMessage = 'Something went wrong'
+        let fullAttachedData: any = null // 🎯 Holds the rich validation data payload
         
         try {
             // Attempt to parse standard JSON response payload if it exists
             const errorData = await res.json()
             errorMessage = errorData.message || JSON.stringify(errorData)
+            
+            // 🎯 CAPTURE THE DATA: Keep the inner arrays (.data) intact
+            if (errorData.data) {
+                fullAttachedData = errorData.data
+            }
         } catch {
-            // 💡 CRITICAL FIX: If parsing JSON fails because the server sent HTML/Plaintext on a 500 crash, 
+            // If parsing JSON fails because the server sent HTML/Plaintext on a 500 crash, 
             // read the raw response as text instead so it doesn't break our execution flow.
             try {
                 errorMessage = await res.text()
@@ -46,7 +52,12 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
             handleAuthFailure()
         }
 
-        throw new Error(errorMessage)
+        // 🎯 THE FIX: Construct a rich error object that carries the backend metadata payload
+        const apiError: any = new Error(errorMessage)
+        apiError.data = fullAttachedData // Attaching .errors and .warnings arrays here
+        apiError.status = res.status
+
+        throw apiError
     }
 
     return res.json()
