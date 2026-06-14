@@ -10,9 +10,12 @@ import {
     PackageCheck,
     CircuitBoard,
     Gauge,
-    Users,
     Star,
     CheckCircle2,
+    Share2,
+    Users,
+    ShieldCheck,
+    Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,12 +56,6 @@ const features = [
     },
 ];
 
-const stats = [
-    { value: "10k+", label: "Components indexed" },
-    { value: "120+", label: "Verified retailers" },
-    { value: "98%", label: "Compatibility accuracy" },
-    { value: "4.8★", label: "Builder satisfaction" },
-];
 
 const steps = [
     {
@@ -81,60 +78,88 @@ const steps = [
 const landing = () => {
     return (
         <div className="p-4 lg:p-8 space-y-12 overflow-hidden">
-            {/* Hero */}
+            {/* HERO */}
             <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl overflow-hidden border border-border"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="
+        relative
+        overflow-hidden
+        rounded-3xl
+        border
+        border-border
+        bg-gradient-to-r
+        from-background
+        via-background
+        to-primary/5
+    "
             >
-                <div className="absolute inset-0">
-                    <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/60" />
-                </div>
-                <div className="relative z-10 p-8 lg:p-14 max-w-2xl">
-                    <Badge className="bg-primary/15 text-primary border-primary/20 mb-4 hover:bg-primary/15">
-                        <Zap className="w-3 h-3 mr-1" /> AI-Powered PC Builder
-                    </Badge>
-                    <h1 className="text-3xl lg:text-5xl font-heading font-bold text-foreground leading-tight mb-4">
-                        Build your <span className="text-primary">perfect PC</span>,
-                        <br />
-                        without the guesswork.
-                    </h1>
-                    <p className="text-muted-foreground text-base lg:text-lg mb-7 max-w-lg">
-                        Buildera is a calm, focused workspace for designing custom desktops. Plan your build, check
-                        compatibility automatically, and compare prices from trusted retailers — all in one place.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                        <Link to="/builder">
-                            <Button size="lg" className="font-semibold gap-2 cursor-pointer">
-                                <Sparkles className="w-4 h-4" />
-                                Start a new build
-                            </Button>
-                        </Link>
-                        <Link to="/marketplace">
-                            <Button size="lg" variant="outline" className="gap-2 cursor-pointer">
-                                Browse parts
-                                <ArrowRight className="w-4 h-4" />
-                            </Button>
-                        </Link>
+                {/* Glow */}
+                <div className="absolute right-0 top-0 h-full w-[55%] bg-primary/10 blur-[180px]" />
+
+                <div className="relative z-10 grid lg:grid-cols-[1fr_0.9fr] items-center min-h-[580px]">
+
+                    {/* LEFT */}
+                    <div className="px-8 py-12 lg:px-14 lg:py-14">
+
+                        <Badge className="mb-5 bg-primary/10 border-primary/20 text-primary">
+                            <Zap className="w-3 h-3 mr-1" />
+                            AI-Powered PC Builder
+                        </Badge>
+
+                        <h1 className="text-5xl lg:text-6xl font-bold leading-[1.05] tracking-tight mb-6">
+                            Build your
+                            <br />
+                            <span className="text-primary">perfect PC</span>,
+                            <br />
+                            without the
+                            <br />
+                            guesswork.
+                        </h1>
+
+                        <p className="text-lg text-muted-foreground max-w-md mb-6">
+                            Buildera helps you design custom desktops,
+                            check compatibility automatically,
+                            and compare prices from trusted retailers.
+                        </p>
+
+                        {/* CTA */}
+                        <div className="flex flex-wrap gap-3 mb-8">
+                            <Link to="/builder">
+                                <Button size="lg" className="gap-2">
+                                    <Sparkles className="w-4 h-4" />
+                                    Start a new build
+                                </Button>
+                            </Link>
+
+                            <Link to="/marketplace">
+                                <Button size="lg" variant="outline" className="gap-2">
+                                    Browse parts
+                                    <ArrowRight className="w-4 h-4" />
+                                </Button>
+                            </Link>
+                        </div>
+
                     </div>
+
+                    {/* RIGHT */}
+                    <div className="hidden lg:flex items-center justify-center relative">
+
+                        <motion.img
+                            src="/src/assets/images/pc-hero2.png"
+                            alt="Buildera PC"
+                            animate={{ y: [0, -12, 0] }}
+                            transition={{ duration: 5, repeat: Infinity }}
+                            className="w-[760px] relative z-10 drop-shadow-[0_0_80px_rgba(59,130,246,.5)]"
+                        />
+
+                        <div className="absolute bottom-28 w-[400px] h-[80px] rounded-full bg-primary/30 blur-3xl" />
+                    </div>
+
                 </div>
+
             </motion.section>
 
-            {/* Stats strip */}
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {stats.map((s, i) => (
-                    <motion.div
-                    key={s.label}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + i * 0.05 }}
-                    className="rounded-xl border border-border bg-card px-5 py-4"
-                    >
-                        <p className="text-2xl lg:text-3xl font-heading font-semibold text-foreground">{s.value}</p>
-                        <p className="text-xs lg:text-sm text-muted-foreground mt-1">{s.label}</p>
-                    </motion.div>
-                ))}
-            </section>
 
             {/* Why Buildera — extended features section */}
             <section>
@@ -209,59 +234,6 @@ const landing = () => {
                                 </h3>
                                 <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
                             </Card>
-                        </motion.div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Featured Builds */}
-            <section>
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h2 className="text-xl lg:text-2xl font-heading font-semibold text-foreground">
-                            Featured build configurations
-                        </h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Hand-picked starting points you can clone and customize.
-                        </p>
-                    </div>
-                    <Link to="/marketplace" className="text-sm text-primary hover:underline shrink-0">
-                        View all
-                    </Link>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {featuredBuilds.map((build, i) => (
-                        <motion.div
-                            key={build.name}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 + i * 0.08 }}
-                        >
-                            <Link to={`/build/${encodeURIComponent(build.name)}`}>
-                                <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative">
-                                    <div className="aspect-square overflow-hidden bg-muted -m-4">
-                                        <img
-                                            src={build.img}
-                                            alt={build.name}
-                                            loading="lazy"
-                                            width={512}
-                                            height={512}
-                                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                                        />
-                                    </div>
-                                    <div className="p-3">
-                                        <Badge variant="secondary" className="text-[10px] mb-1.5">
-                                            {build.category}
-                                        </Badge>
-                                        <h3 className="text-sm font-heading font-semibold text-foreground truncate">
-                                            {build.name}
-                                        </h3>
-                                        <div className="mt-2">
-                                            <span className="text-base font-heading font-bold text-foreground">{build.price}</span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </Link>
                         </motion.div>
                     ))}
                 </div>
