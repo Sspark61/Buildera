@@ -11,19 +11,38 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
         ...options
     })
 
-    // 1. Standard 401 check
+    // 1. Immediate standard 401 check (before trying to read any body payload)
     if (res.status === 401) {
         handleAuthFailure()
         throw new Error('Unauthorized')
     }
 
     if (!res.ok) {
-        const error = await res.json()
-        const errorMessage = error.message || 'Something went wrong'
+        let errorMessage = 'Something went wrong'
+        
+        try {
+            // Attempt to parse standard JSON response payload if it exists
+            const errorData = await res.json()
+            errorMessage = errorData.message || JSON.stringify(errorData)
+        } catch {
+            // 💡 CRITICAL FIX: If parsing JSON fails because the server sent HTML/Plaintext on a 500 crash, 
+            // read the raw response as text instead so it doesn't break our execution flow.
+            try {
+                errorMessage = await res.text()
+            } catch {
+                errorMessage = `Server Error (${res.status})`
+            }
+        }
 
-        // 2. 💡 BACKEND WORKAROUND: Catch 500 crashes caused by dead authentication tokens
+        // 2. Scan parsed payload safely for authentication crash signatures
         const lowerMessage = errorMessage.toLowerCase()
-        if (res.status === 500 && (lowerMessage.includes('auth') || lowerMessage.includes('token') || lowerMessage.includes('unauthorized'))) {
+        if (
+            res.status === 500 || 
+            lowerMessage.includes('auth') || 
+            lowerMessage.includes('token') || 
+            lowerMessage.includes('unauthorized') ||
+            lowerMessage.includes('jwt')
+        ) {
             handleAuthFailure()
         }
 
@@ -33,7 +52,7 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
     return res.json()
 }
 
-// Reusable redirection logic helper
+// Global Redirect Processor
 const handleAuthFailure = () => {
     localStorage.removeItem('token')
     if (window.location.pathname !== '/login') {
