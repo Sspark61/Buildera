@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Plus, TrendingUp } from "lucide-react";
+import { ArrowLeft, Check, Plus, TrendingUp, ShoppingBag, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,8 +29,6 @@ const usePriceHistory = (name: string) => {
     const [data, setData] = useState<PricePoint[]>([])
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-
-
 
     useEffect(() => {
         if (!name) return
@@ -251,6 +249,105 @@ const PriceHistoryChart = ({ name }: { name: string }) => {
     )
 }
 
+// 💻 ---- Retailers Dynamic Registry Map ----
+const RETAILER_REGISTRY: Record<string, { name: string; initial: string; bg: string; text: string }> = {
+    "nvidia.com":      { name: "NVIDIA Store", initial: "NS", bg: "bg-[#76B900]", text: "text-white" },
+    "amazon.com":      { name: "Amazon",       initial: "A",  bg: "bg-[#FF9900]", text: "text-black font-bold" },
+    "newegg.com":      { name: "Newegg",       initial: "N",  bg: "bg-[#F5A623]", text: "text-white" },
+    "microcenter.com": { name: "Micro Center",  initial: "MC", bg: "bg-[#E01A22]", text: "text-white" },
+    "bhphotovideo.com":{ name: "B&H Photo",    initial: "BP", bg: "bg-[#000000]", text: "text-white border border-border/40" },
+};
+
+const getStoreMetaFromUrl = (urlStr: string) => {
+    const domain = urlStr.toLowerCase();
+    const matchedKey = Object.keys(RETAILER_REGISTRY).find(key => domain.includes(key));
+
+    if (matchedKey) {
+        return {
+            ...RETAILER_REGISTRY[matchedKey],
+            displayDomain: matchedKey
+        };
+    }
+
+    try {
+        const urlObj = new URL(urlStr);
+        const host = urlObj.hostname.replace("www.", "");
+        return {
+            name: host.split('.')[0],
+            displayDomain: host,
+            initial: host.substring(0, 2).toUpperCase(),
+            bg: "bg-muted",
+            text: "text-muted-foreground"
+        };
+    } catch {
+        return { name: "Retailer", displayDomain: "Store Link", initial: "R", bg: "bg-muted", text: "text-muted-foreground" };
+    }
+};
+
+// 💻 ---- Where To Buy Link Grid Component ----
+export const WhereToBuy = ({ urls, currentPrice }: { urls: string[]; currentPrice?: number | null }) => {
+    if (!urls || urls.length === 0) return null;
+
+    return (
+        <div className="space-y-4 my-10">
+            <div className="space-y-1">
+                <h3 className="text-base font-heading font-bold text-foreground flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4 text-primary" /> Where to buy
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                    Specsfetcher doesn't sell products directly. Compare prices from trusted retailers below.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {urls.map((url, index) => {
+                    const meta = getStoreMetaFromUrl(url);
+                    const isBestPrice = index === 0;
+
+                    return (
+                        <a
+                            key={index}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-card/40 hover:bg-muted/30 hover:border-primary/30 transition-all group"
+                        >
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${meta.bg} ${meta.text} text-xs font-semibold`}>
+                                    {meta.initial}
+                                </div>
+                                
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-heading font-semibold text-foreground truncate select-none capitalize">
+                                            {meta.name}
+                                        </span>
+                                        {isBestPrice && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium border border-primary/20">
+                                                Best price
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground/70 truncate block">
+                                        {meta.displayDomain}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 ml-4">
+                                <span className="text-sm font-heading font-bold text-foreground">
+                                    {currentPrice ? `$${currentPrice.toLocaleString()}` : "View"}
+                                </span>
+                                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                        </a>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 // ---- Main Page ----
 const ProductDetail = () => {
     const { id } = useParams()
@@ -355,7 +452,6 @@ const ProductDetail = () => {
                                 size="lg"
                                 className="w-full gap-2 p-5 font-heading font-semibold text-sm sm:text-base"
                                 onClick={() => {
-                                    // Encode parameters safely to handle spaces and special characters
                                     const targetType = encodeURIComponent(product.type);
                                     const targetName = encodeURIComponent(product.name);
                                     navigate(`/builder?preselectId=${product.id}&preselectType=${targetType}&preselectName=${targetName}`);
@@ -377,6 +473,9 @@ const ProductDetail = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* 💻 WHERE TO BUY LINKS (Renders dynamically directly beneath top split block) */}
+                <WhereToBuy urls={product.urls} currentPrice={product.price}/>
 
                 {/* Specs table */}
                 <div className="mt-10">
