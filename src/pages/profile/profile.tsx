@@ -42,8 +42,7 @@ const Profile = () => {
     const { data: favoritesData, isLoading: favoritesLoading } = useGetFavorites()
     const favorites = favoritesData?.data ?? []
     const queryClient = useQueryClient()
-
-    // File input DOM reference
+    
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -144,13 +143,12 @@ const Profile = () => {
 
     return (
         <div className="p-4 lg:p-8 space-y-6 max-w-6xl mx-auto">
-            {/* Hidden native input handler */}
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
             />
 
             {/* Profile header */}
