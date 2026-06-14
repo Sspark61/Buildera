@@ -295,8 +295,8 @@ export const WhereToBuy = ({ urls, currentPrice }: { urls: string[]; currentPric
                     <ShoppingBag className="w-4 h-4 text-primary" /> Where to buy
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                    Specsfetcher doesn't sell products directly. Compare prices from trusted retailers below.
-                </p>
+                    Buildera doesn't sell products directly. Compare prices from trusted retailers below.
+                </p>    
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
