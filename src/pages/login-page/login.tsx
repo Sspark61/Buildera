@@ -14,11 +14,12 @@ export default function Login() {
     const [loginError, setLoginError] = useState('')
     const { mutate: login, isPending } = useLogin()
     const navigate = useNavigate()
-    const location = useLocation() // 1. Access the location context to check for state metadata
+    const location = useLocation() 
     const { theme } = useTheme()
 
-    // 2. Check where they came from, default back to home ('/') if they navigated directly to login
-    const from = location.state?.from?.pathname || '/';
+    const searchParams = new URLSearchParams(location.search);
+    const redirectParam = searchParams.get('redirect');
+    const from = redirectParam || location.state?.from?.pathname || '/';
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
@@ -58,7 +59,7 @@ export default function Login() {
                                 { email: values.email, password: values.password },
                                 {
                                     onSuccess: () => {
-                                        // 3. Redirect back to the dynamic 'from' path instead of a static target
+                                        // Redirect back to saved route context smoothly
                                         navigate(from, { replace: true })
                                     },
                                     onError: () => {
