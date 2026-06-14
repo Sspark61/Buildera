@@ -5,7 +5,7 @@ import { api } from '../api/api'
 interface Build {
     id: number
     name: string | null
-    budget: number
+    budget: number | null
     purpose: string
     shareToken: string | null
     createdAt: string
@@ -37,7 +37,7 @@ interface SingleBuildResponse {
     data: {
         id: number
         name: string | null
-        budget: number
+        budget: number | null
         purpose: string
         shareToken: string | null
         createdAt: string
@@ -50,7 +50,7 @@ interface SingleBuildResponse {
 
 interface CreateBuildBody {
     name: string
-    budget: number
+    budget?: number | null
     purpose: string
 }
 
