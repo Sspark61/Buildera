@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import heroImg from '@/assets/images/pc-hero2.png'
 const features = [
     {
         icon: Sparkles,
@@ -131,7 +132,7 @@ const landing = () => {
                     <div className="hidden lg:flex items-center justify-center relative">
 
                         <motion.img
-                            src="/src/assets/images/pc-hero2.png"
+                            src={heroImg}
                             alt="Buildera PC"
                             animate={{ y: [0, -12, 0] }}
                             transition={{ duration: 5, repeat: Infinity }}
