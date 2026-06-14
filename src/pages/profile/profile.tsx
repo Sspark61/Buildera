@@ -236,11 +236,6 @@ const Profile = () => {
                         </TabsTrigger>
                         <TabsTrigger value="wishlist" className="gap-1.5 text-xs">
                             <Heart className="w-3.5 h-3.5" /> Wishlist
-                            {favorites.length > 0 && (
-                                <span className="ml-1 bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                                    {favorites.length}
-                                </span>
-                            )}
                         </TabsTrigger>
                     </TabsList>
                     
@@ -249,8 +244,16 @@ const Profile = () => {
                             <p className="text-sm text-muted-foreground text-center py-10">Loading builds...</p>
                         ) : builds.length === 0 ? (
                             <div className="flex flex-col items-center justify-center text-center py-16 border border-dashed border-border rounded-xl">
+                                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                    <Cpu className="w-5 h-5 text-muted-foreground" />
+                                </div>
                                 <p className="text-sm text-foreground font-medium">No builds yet</p>
-                                <p className="text-xs text-muted-foreground mt-1 mb-4">Start building your dream PC.</p>
+                                <p className="text-xs text-muted-foreground mt-1 mb-4 font-normal">
+                                    Start building your dream PC configuration.
+                                </p>
+                                <Button asChild size="sm">
+                                    <Link to="/builder">Create a build</Link>
+                                </Button>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -260,7 +263,7 @@ const Profile = () => {
                                             <Link to={`/builder?buildId=${build.id}`}>
                                                 <div className="p-4 flex flex-col gap-2">
                                                     <Badge variant="secondary" className="text-[10px] w-fit -mx-1">{build.purpose}</Badge>
-                                                    <h3 className="text-sm font-heading font-semibold text-foreground truncate">
+                                                    <h3 className="text-sm font-heading font-semibold text-foreground truncate pr-6">
                                                         {build.name ?? 'Unnamed Build'}
                                                     </h3>
                                                     <div className="flex items-center justify-between mt-1">
@@ -271,7 +274,7 @@ const Profile = () => {
                                                     </div>
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-xs text-muted-foreground">
-                                                            Budget: ${build.budget.toLocaleString()}
+                                                            Budget: {build.budget !== null && build.budget !== undefined ? `$${build.budget.toLocaleString()}` : 'No budget set'}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
                                                             {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -282,7 +285,7 @@ const Profile = () => {
                                             <button
                                                 onClick={() => setBuildToDelete({ id: build.id, name: build.name })}
                                                 disabled={deletingId === build.id}
-                                                className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                                className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center bg-background/80 backdrop-blur-sm border border-border text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shadow-sm"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </button>
