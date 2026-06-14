@@ -236,11 +236,6 @@ const Profile = () => {
                         </TabsTrigger>
                         <TabsTrigger value="wishlist" className="gap-1.5 text-xs">
                             <Heart className="w-3.5 h-3.5" /> Wishlist
-                            {favorites.length > 0 && (
-                                <span className="ml-1 bg-primary/20 text-primary text-[10px] px-1.5 py-0.5 rounded-full">
-                                    {favorites.length}
-                                </span>
-                            )}
                         </TabsTrigger>
                     </TabsList>
                     
@@ -271,7 +266,7 @@ const Profile = () => {
                                                     </div>
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-xs text-muted-foreground">
-                                                            Budget: ${build.budget.toLocaleString()}
+                                                            Budget: {build.budget !== null && build.budget !== undefined ? `$${Number(build.budget).toLocaleString()}` : 'No budget set'}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
                                                             {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
