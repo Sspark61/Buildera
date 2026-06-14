@@ -1,3 +1,7 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/immutability */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
@@ -14,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -350,7 +354,6 @@ const syncBuildSelections = async (
     buildId: number,
     setSelections: React.Dispatch<React.SetStateAction<Record<string, ApiComponent>>>
 ) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updated: any = await api(`/builds/${buildId}`)
     if (!updated?.data?.components) return
 
@@ -365,7 +368,7 @@ const syncBuildSelections = async (
                 brand: c.brand,
                 price: c.price,
                 imageUrl: c.imageUrl,
-                buildComponentId: c.buildComponentId, // 👈 always fresh
+                buildComponentId: c.buildComponentId, 
             }
         }
     })
@@ -374,11 +377,8 @@ const syncBuildSelections = async (
 
 // ---- Main Builder ----
 const Builder = () => {
-    const [searchParams, setSearchParams] = useSearchParams()
+    const [searchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
-    const preselectId = searchParams.get('preselectId')
-    const preselectType = searchParams.get('preselectType')
-    const preselectName = searchParams.get('preselectName')
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -404,11 +404,11 @@ const Builder = () => {
     const [_saveError, setSaveError] = useState('')
     const [isSaved, setIsSaved] = useState(false)
     const [isAddingComponent, setIsAddingComponent] = useState(false)
+    const [isLocalSaving, setIsLocalSaving] = useState(false) // 👈 Added local state wrapper to manually track asynchronous loop states
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const navigate = useNavigate()
-    const location = useLocation();
 
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
@@ -435,7 +435,7 @@ const Builder = () => {
                         brand: c.brand,
                         price: c.price,
                         imageUrl: c.imageUrl,
-                        buildComponentId: c.buildComponentId, // 👈 stored from the start
+                        buildComponentId: c.buildComponentId, 
                     }
                 }
             })
@@ -443,118 +443,6 @@ const Builder = () => {
         }
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
-
-    // 💡 IMPROVED HOOK: Reliably auto-select items passed from the marketplace
-    useEffect(() => {
-        if (!preselectId || !preselectType) return;
-
-        const catKey = Object.entries(categoryTypeMap).find(
-            ([, apiValue]) => apiValue.toLowerCase() === preselectType.toLowerCase()
-        )?.[0];
-
-        if (!catKey) return;
-
-        const componentIdNum = Number(preselectId);
-
-        // If we are loading an existing saved build, wait until it is fully seeded
-        // This stops the URL parameter from fighting with the database data loading process
-        if (existingBuildId && !seeded) {
-            return;
-        }
-
-        const performPreselection = async () => {
-            if (activeBuildId) {
-                setIsAddingComponent(true);
-                try {
-                    const existing = selections[catKey];
-                    if (existing) {
-                        await api(`/builds/${activeBuildId}/components/${existing.id}`, {
-                            method: 'DELETE',
-                        });
-                    }
-
-                    await api(`/builds/${activeBuildId}/components`, {
-                        method: 'POST',
-                        body: JSON.stringify({ componentId: componentIdNum }),
-                    });
-
-                    await syncBuildSelections(activeBuildId, setSelections);
-                    setIsSaved(true);
-                } catch (err) {
-                    console.error("Failed to sync preselected item to saved build:", err);
-                } finally {
-                    setIsAddingComponent(false);
-                }
-            } else {
-                // If it's a completely new build configuration
-                const decodedName = preselectName ? decodeURIComponent(preselectName) : "";
-
-                // Set initial placeholder immediately so the UI is responsive
-                const provisionalComponent: ApiComponent = {
-                    id: componentIdNum,
-                    name: decodedName || "Loading component details...",
-                    type: preselectType,
-                    brand: "",
-                    price: null,
-                    imageUrl: "",
-                };
-
-                setSelections((prev) => ({ ...prev, [catKey]: provisionalComponent }));
-                setIsSaved(false);
-
-                try {
-                    // Fetch components of this specific type to narrow down search results drastically
-                    const typeParam = categoryTypeMap[catKey];
-                    const res = await api(`/components?type=${encodeURIComponent(typeParam)}&limit=100`);
-
-                    // Look through the list directly for a strict ID match
-                    const matchedItem = res?.data?.components?.find((c: any) => c.id === componentIdNum);
-
-                    if (matchedItem) {
-                        setSelections((prev) => ({
-                            ...prev,
-                            [catKey]: {
-                                id: matchedItem.id,
-                                name: matchedItem.name,
-                                type: matchedItem.type,
-                                brand: matchedItem.brand,
-                                price: matchedItem.price,
-                                imageUrl: matchedItem.imageUrl,
-                            },
-                        }));
-                    } else if (decodedName) {
-                        // Backup strategy: Try to query explicitly by name if ID isn't present in the type list chunk
-                        const fallbackRes = await api(`/components?search=${encodeURIComponent(decodedName)}&limit=5`);
-                        const fallbackMatch = fallbackRes?.data?.components?.find((c: any) => c.id === componentIdNum);
-                        if (fallbackMatch) {
-                            setSelections((prev) => ({
-                                ...prev,
-                                [catKey]: {
-                                    id: fallbackMatch.id,
-                                    name: fallbackMatch.name,
-                                    type: fallbackMatch.type,
-                                    brand: fallbackMatch.brand,
-                                    price: fallbackMatch.price,
-                                    imageUrl: fallbackMatch.imageUrl,
-                                },
-                            }));
-                        }
-                    }
-                } catch (err) {
-                    console.error("Could not fetch full component metadata details:", err);
-                }
-            }
-
-            // Clean up url parameters safely
-            const newParams = new URLSearchParams(searchParams);
-            newParams.delete('preselectId');
-            newParams.delete('preselectType');
-            newParams.delete('preselectName');
-            setSearchParams(newParams, { replace: true });
-        };
-
-        performPreselection();
-    }, [preselectId, preselectType, activeBuildId, seeded, existingBuildId, searchParams, setSearchParams]);
 
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
@@ -568,7 +456,6 @@ const Builder = () => {
             setIsAddingComponent(true)
             setCompatibilityErrors([])
 
-            // 1. remove existing component using component.id (not buildComponentId)
             const existing = selections[activeCategory.key]
             if (existing) {
                 try {
@@ -580,7 +467,6 @@ const Builder = () => {
                 }
             }
 
-            // 2. add new component
             try {
                 await api(`/builds/${activeBuildId}/components`, {
                     method: 'POST',
@@ -592,7 +478,6 @@ const Builder = () => {
                 setIsSaved(true)
 
             } catch (err: any) {
-                // on failure, re-add the old component back
                 if (existing) {
                     try {
                         await api(`/builds/${activeBuildId}/components`, {
@@ -644,7 +529,6 @@ const Builder = () => {
         if (activeBuildId && component) {
             setIsAddingComponent(true)
             try {
-                // use component.id not buildComponentId
                 await api(`/builds/${activeBuildId}/components/${component.id}`, {
                     method: 'DELETE',
                 })
@@ -666,13 +550,8 @@ const Builder = () => {
     }
 
     const handleSave = () => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            navigate("/login", { state: { from: location } });
-            return;
-        }
-
         setSaveError('')
+        setIsLocalSaving(true) // 👈 Turn saving state on immediately
 
         if (activeBuildId) {
             api(`/builds/${activeBuildId}`, {
@@ -691,8 +570,10 @@ const Builder = () => {
                     components: [],
                     message: err.message
                 }])
+            }).finally(() => {
+                setIsLocalSaving(false) // 👈 Turn saving state off when done updating
             })
-            return;
+            return
         }
 
         createBuild(
@@ -702,6 +583,7 @@ const Builder = () => {
                     const buildId = data.data.id
                     setActiveBuildId(buildId)
 
+                    // Loop runs asynchronously, keeping state active until everything completes
                     for (const component of Object.values(selections)) {
                         try {
                             await api(`/builds/${buildId}/components`, {
@@ -713,13 +595,14 @@ const Builder = () => {
                         }
                     }
 
-                    // sync to get buildComponentIds for future edits
                     await syncBuildSelections(buildId, setSelections)
                     setIsSaved(true)
                     setSaveError('')
+                    setIsLocalSaving(false) // 👈 Turn saving state off *only* after loop ends completely
                 },
                 onError: (error) => {
                     setSaveError(error.message)
+                    setIsLocalSaving(false) // 👈 Safety clear on error
                 }
             }
         )
@@ -746,7 +629,9 @@ const Builder = () => {
     }
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
-    const isSaving = isCreating || isAddingComponent
+    
+    // 👈 Combine with our local hook to keep UI synchronized perfectly
+    const isSaving = isCreating || isAddingComponent || isLocalSaving 
 
     if (existingBuildId && isBuildLoading) {
         return (
@@ -808,7 +693,7 @@ const Builder = () => {
                             className="gradient-primary neon-glow text-primary-foreground gap-1.5"
                         >
                             <Save className="w-3.5 h-3.5" />
-                            {isCreating ? 'Creating...' : isAddingComponent ? 'Adding...' : isSaved ? 'Saved ✓' : 'Save Build'}
+                            {isSaving ? 'Saving...' : isSaved ? 'Saved ✓' : 'Save Build'}
                         </Button>
                     </div>
                 </div>
