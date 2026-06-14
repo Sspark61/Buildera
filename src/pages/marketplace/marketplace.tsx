@@ -310,9 +310,12 @@ const Marketplace = () => {
                                         <div className="flex gap-3 sm:gap-4 p-3 min-w-0 items-center w-full">
                                             <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
                                                 <img
-                                                    src={product.imageUrl}
+                                                    src={product.imageUrl || altImage}
                                                     alt={product.name}
                                                     loading="lazy"
+                                                    onError={(e) => {
+                                                        e.currentTarget.src = altImage;
+                                                    }}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             </div>

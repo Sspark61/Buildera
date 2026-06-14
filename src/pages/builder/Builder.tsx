@@ -35,6 +35,8 @@ import {
 } from "@/hooks/use-builds";
 import { api } from "@/api/api";
 import { motion } from "framer-motion";
+
+import altImage from '@/assets/images/image2.png';
 // ---- Types ----
 interface ApiComponent {
     id: number
@@ -144,9 +146,12 @@ const ComponentBrowser = ({
                                             }`}
                                     >
                                         <img
-                                            src={c.imageUrl}
+                                            src={c.imageUrl || altImage}
                                             alt={c.name}
                                             loading="lazy"
+                                            onError={(e) => {
+                                                e.currentTarget.src = altImage;
+                                            }}
                                             className="w-14 h-14 rounded-md object-cover bg-muted shrink-0"
                                         />
                                         <div className="flex-1 min-w-0">
@@ -841,8 +846,11 @@ const Builder = () => {
                                                                 {selected ? (
                                                                     <div className="flex items-center gap-2 min-w-0 mt-0.5">
                                                                         <img
-                                                                            src={selected.imageUrl}
+                                                                            src={selected.imageUrl || altImage}
                                                                             alt={selected.name}
+                                                                            onError={(e) => {
+                                                                                e.currentTarget.src = altImage;
+                                                                            }}
                                                                             className="w-5 h-5 rounded object-cover bg-muted shrink-0"
                                                                         />
                                                                         <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">

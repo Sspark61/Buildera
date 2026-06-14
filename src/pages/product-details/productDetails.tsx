@@ -18,6 +18,7 @@ import {
     ResponsiveContainer
 } from "recharts"
 
+import altImage from '@/assets/images/image2.png';
 // ---- Price History Hook ----
 interface PricePoint {
     date: string
@@ -409,8 +410,11 @@ const ProductDetail = () => {
                     <Card className="bg-card border-border overflow-hidden -py-4">
                         <div className="aspect-square overflow-hidden">
                             <img
-                                src={product.imageUrl}
+                                src={product.imageUrl || altImage}
                                 alt={product.name}
+                                onError={(e) => {
+                                    e.currentTarget.src = altImage;
+                                }}
                                 className="h-full object-cover"
                             />
                         </div>

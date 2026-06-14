@@ -32,6 +32,7 @@ import { useGetBuilds, useDeleteBuild } from '@/hooks/use-builds'
 import { Link } from 'react-router-dom';
 import { useGetFavorites } from '@/hooks/use-favorites'
 
+import altImage from '@/assets/images/image2.png';
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
     const { mutate: updateProfile, isPending } = useUpdateProfile()
@@ -323,9 +324,12 @@ const Profile = () => {
                                                 </div>
                                                 <div className="aspect-square overflow-hidden bg-muted">
                                                     <img
-                                                        src={item.imageUrl}
+                                                        src={item.imageUrl || altImage}
                                                         alt={item.name}
                                                         loading="lazy"
+                                                        onError={(e) => {
+                                                            e.currentTarget.src = altImage;
+                                                        }}
                                                         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                                                     />
                                                 </div>
