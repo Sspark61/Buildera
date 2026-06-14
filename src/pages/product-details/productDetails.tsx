@@ -354,7 +354,12 @@ const ProductDetail = () => {
                             <Button
                                 size="lg"
                                 className="w-full gap-2 p-5 font-heading font-semibold text-sm sm:text-base"
-                                onClick={() => navigate("/builder")}
+                                onClick={() => {
+                                    // Encode parameters safely to handle spaces and special characters
+                                    const targetType = encodeURIComponent(product.type);
+                                    const targetName = encodeURIComponent(product.name);
+                                    navigate(`/builder?preselectId=${product.id}&preselectType=${targetType}&preselectName=${targetName}`);
+                                }}
                             >
                                 <Plus className="w-4 h-4" /> Add to Build
                             </Button>
