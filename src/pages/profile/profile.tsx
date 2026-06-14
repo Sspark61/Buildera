@@ -313,7 +313,7 @@ const Profile = () => {
                                 {favorites.map((item, i) => (
                                     <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
                                         <Link to={`/marketplace/${item.id}`}>
-                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative">
+                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative -p-1">
                                                 <div className="absolute top-2 right-2 z-10">
                                                     <FavoriteButton componentId={item.id} />
                                                 </div>
