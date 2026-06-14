@@ -55,6 +55,7 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
 // Global Redirect Processor
 const handleAuthFailure = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('userName')
     if (window.location.pathname !== '/login') {
         const currentPath = window.location.pathname + window.location.search
         window.location.replace(`/login?redirect=${encodeURIComponent(currentPath)}`)
