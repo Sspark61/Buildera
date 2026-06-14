@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import FavoriteButton from "@/components/favoritebutton/favoriteButton";
 import { useGetComponents } from "@/hooks/use-components";
+import altImage from '@/assets/images/image2.png';
 
 type ViewMode = "grid" | "list";
 
@@ -261,9 +262,12 @@ const Marketplace = () => {
                                         {/* 💡 FIX 2: Wrapped image in an aspect container that can't grow past its column size */}
                                         <div className="aspect-square overflow-hidden bg-muted w-full shrink-0">
                                             <img
-                                                src={product.imageUrl}
+                                                src={product.imageUrl || altImage}
                                                 alt={product.name}
                                                 loading="lazy"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = altImage;
+                                                }}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
                                         </div>
