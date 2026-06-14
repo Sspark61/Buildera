@@ -14,7 +14,7 @@ export default function Login() {
     const [loginError, setLoginError] = useState('')
     const { mutate: login, isPending } = useLogin()
     const navigate = useNavigate()
-    const location = useLocation() 
+    const location = useLocation()
     const { theme } = useTheme()
 
     const searchParams = new URLSearchParams(location.search);
@@ -23,9 +23,10 @@ export default function Login() {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
-            <div className="hidden lg:block relative h-full bg-cover bg-center opacity-70" style={{ backgroundImage: `url(${loginImg})` }}>
-                <div className="bottom-12 left-12 absolute">
-                    <h1 className='text-3xl font-bold font-heading'>Engineer <br /> Your Reality.</h1>
+            <div className="hidden lg:block relative h-full">
+                <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: `url(${loginImg})` }} />
+                <div className="bottom-12 left-12 absolute z-10">
+                    <h1 className='text-3xl font-bold font-(--foreground)'>Engineer <br /> Your Reality.</h1>
                     <p className='text-sm text-(--muted-foreground)'>Build the machine of your dreams with Buildera.</p>
                 </div>
             </div>
@@ -59,7 +60,6 @@ export default function Login() {
                                 { email: values.email, password: values.password },
                                 {
                                     onSuccess: () => {
-                                        // Redirect back to saved route context smoothly
                                         navigate(from, { replace: true })
                                     },
                                     onError: () => {
@@ -78,15 +78,13 @@ export default function Login() {
                                 <div>
                                     <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
                                         <Mail size={18} strokeWidth={1.5} color="gray" />
-
                                         <Field
                                             type="email"
                                             name="email"
                                             placeholder="Email address"
-                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
+                                            className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm"
                                         />
                                     </div>
-
                                     <ErrorMessage
                                         name="email"
                                         component="div"
@@ -94,20 +92,19 @@ export default function Login() {
                                     />
                                 </div>
                                 <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
                                         <Lock size={18} strokeWidth={1.5} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
+                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm" />
                                         <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
                                     </div>
                                     <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                    {loginError &&
-                                        (<p className='text-sm text-(--destructive) text-start mt-1'>
+                                    {loginError && (
+                                        <p className='text-sm text-(--destructive) text-start mt-1'>
                                             *Invalid email or password
                                         </p>
-                                        )}
+                                    )}
                                     <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-4 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
                                 </div>
-
                                 <button
                                     type="submit"
                                     disabled={isSubmitting || isPending}
