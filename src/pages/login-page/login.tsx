@@ -24,9 +24,9 @@ export default function Login() {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
             <div className="hidden lg:block relative h-full">
-                <div className="absolute inset-0 bg-cover bg-center opacity-80" style={{ backgroundImage: `url(${loginImg})` }} />
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${loginImg})` }} />
                 <div className="bottom-12 left-12 absolute z-10">
-                    <h1 className='text-3xl font-bold font-(--foreground)'>Engineer <br /> Your Reality.</h1>
+                    <h1 className='text-3xl font-bold text-white/80'>Engineer <br /> Your Reality.</h1>
                     <p className='text-sm text-(--muted-foreground)'>Build the machine of your dreams with Buildera.</p>
                 </div>
             </div>
