@@ -454,6 +454,12 @@ const syncBuildSelections = async (
 const Builder = () => {
     const [searchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
+    
+    // Extract preselect parameters
+    const preselectId = searchParams.get('preselectId')
+    const preselectType = searchParams.get('preselectType')
+    const preselectName = searchParams.get('preselectName')
+    
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -486,6 +492,25 @@ const Builder = () => {
 
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
+
+    // Automatically trigger pre-selection from ProductDetail
+    useEffect(() => {
+        if (preselectId && preselectType) {
+            const decodedType = decodeURIComponent(preselectType);
+            const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === decodedType)?.[0];
+            
+            if (catKey) {
+                handleSelect({
+                    id: Number(preselectId),
+                    name: decodeURIComponent(preselectName || ''),
+                    type: decodedType,
+                    brand: '',
+                    price: null,
+                    imageUrl: ''
+                }, catKey);
+            }
+        }
+    }, [preselectId, preselectType, preselectName]);
 
     useEffect(() => {
         if (!existingBuildId || seeded || !existingBuildData?.data) return
@@ -523,24 +548,20 @@ const Builder = () => {
         const delayDebounceFn = setTimeout(() => {
             setIsLocalSaving(true);
 
-            // 1. Build the body dynamically
             const payload: Record<string, any> = {
                 name: buildName,
                 purpose: buildPurpose,
             };
 
-            // 2. Only attach budget if the user actually typed a value
             if (budget.trim() !== "") {
                 payload.budget = Number(budget);
             }
 
             api(`/builds/${activeBuildId}`, {
                 method: 'PUT',
-                body: JSON.stringify(payload), // 🎯 Key is completely omitted if blank
+                body: JSON.stringify(payload),
             })
-                .then(() => {
-                    // Success
-                })
+                .then(() => {})
                 .catch((err) => {
                     console.error("Failed to auto-save build details:", err);
                 })
@@ -557,25 +578,24 @@ const Builder = () => {
         setBrowserOpen(true)
     }
 
-    const handleSelect = async (component: ApiComponent) => {
-        if (!activeCategory) return
+    const handleSelect = async (component: ApiComponent, forcedCategoryKey?: string) => {
+        const targetKey = forcedCategoryKey || activeCategory?.key;
+        if (!targetKey) return
 
         setIsAddingComponent(true)
         setCompatibilityErrors([])
 
         let currentBuildId = activeBuildId;
-        const existing = selections[activeCategory.key]
+        const existing = selections[targetKey]
 
         try {
             // Step 1: Initialize new build record on backend if it doesn't exist yet
             if (!currentBuildId) {
-                // 1. Build the payload dynamically
                 const buildPayload: Record<string, any> = {
                     name: buildName,
                     purpose: buildPurpose
                 };
 
-                // 2. Only attach budget if it's not blank
                 if (budget.trim() !== "") {
                     buildPayload.budget = Number(budget);
                 }
