@@ -378,8 +378,11 @@ const syncBuildSelections = async (
 
 // ---- Main Builder ----
 const Builder = () => {
-    const [searchParams] = useSearchParams()
+    const [searchParams, setSearchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
+    const preselectId = searchParams.get('preselectId')
+    const preselectType = searchParams.get('preselectType')
+    const preselectName = searchParams.get('preselectName')
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -443,6 +446,118 @@ const Builder = () => {
         }
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
+
+    // 💡 IMPROVED HOOK: Reliably auto-select items passed from the marketplace
+    useEffect(() => {
+        if (!preselectId || !preselectType) return;
+
+        const catKey = Object.entries(categoryTypeMap).find(
+            ([, apiValue]) => apiValue.toLowerCase() === preselectType.toLowerCase()
+        )?.[0];
+
+        if (!catKey) return;
+
+        const componentIdNum = Number(preselectId);
+
+        // If we are loading an existing saved build, wait until it is fully seeded
+        // This stops the URL parameter from fighting with the database data loading process
+        if (existingBuildId && !seeded) {
+            return;
+        }
+
+        const performPreselection = async () => {
+            if (activeBuildId) {
+                setIsAddingComponent(true);
+                try {
+                    const existing = selections[catKey];
+                    if (existing) {
+                        await api(`/builds/${activeBuildId}/components/${existing.id}`, {
+                            method: 'DELETE',
+                        });
+                    }
+
+                    await api(`/builds/${activeBuildId}/components`, {
+                        method: 'POST',
+                        body: JSON.stringify({ componentId: componentIdNum }),
+                    });
+
+                    await syncBuildSelections(activeBuildId, setSelections);
+                    setIsSaved(true);
+                } catch (err) {
+                    console.error("Failed to sync preselected item to saved build:", err);
+                } finally {
+                    setIsAddingComponent(false);
+                }
+            } else {
+                // If it's a completely new build configuration
+                const decodedName = preselectName ? decodeURIComponent(preselectName) : "";
+
+                // Set initial placeholder immediately so the UI is responsive
+                const provisionalComponent: ApiComponent = {
+                    id: componentIdNum,
+                    name: decodedName || "Loading component details...",
+                    type: preselectType,
+                    brand: "",
+                    price: null,
+                    imageUrl: "",
+                };
+
+                setSelections((prev) => ({ ...prev, [catKey]: provisionalComponent }));
+                setIsSaved(false);
+
+                try {
+                    // Fetch components of this specific type to narrow down search results drastically
+                    const typeParam = categoryTypeMap[catKey];
+                    const res = await api(`/components?type=${encodeURIComponent(typeParam)}&limit=100`);
+
+                    // Look through the list directly for a strict ID match
+                    const matchedItem = res?.data?.components?.find((c: any) => c.id === componentIdNum);
+
+                    if (matchedItem) {
+                        setSelections((prev) => ({
+                            ...prev,
+                            [catKey]: {
+                                id: matchedItem.id,
+                                name: matchedItem.name,
+                                type: matchedItem.type,
+                                brand: matchedItem.brand,
+                                price: matchedItem.price,
+                                imageUrl: matchedItem.imageUrl,
+                            },
+                        }));
+                    } else if (decodedName) {
+                        // Backup strategy: Try to query explicitly by name if ID isn't present in the type list chunk
+                        const fallbackRes = await api(`/components?search=${encodeURIComponent(decodedName)}&limit=5`);
+                        const fallbackMatch = fallbackRes?.data?.components?.find((c: any) => c.id === componentIdNum);
+                        if (fallbackMatch) {
+                            setSelections((prev) => ({
+                                ...prev,
+                                [catKey]: {
+                                    id: fallbackMatch.id,
+                                    name: fallbackMatch.name,
+                                    type: fallbackMatch.type,
+                                    brand: fallbackMatch.brand,
+                                    price: fallbackMatch.price,
+                                    imageUrl: fallbackMatch.imageUrl,
+                                },
+                            }));
+                        }
+                    }
+                } catch (err) {
+                    console.error("Could not fetch full component metadata details:", err);
+                }
+            }
+
+            // Clean up url parameters safely
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('preselectId');
+            newParams.delete('preselectType');
+            newParams.delete('preselectName');
+            setSearchParams(newParams, { replace: true });
+        };
+
+        performPreselection();
+    }, [preselectId, preselectType, activeBuildId, seeded, existingBuildId, searchParams, setSearchParams]);
 
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
