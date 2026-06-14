@@ -18,9 +18,12 @@ interface FavoritesResponse {
 }
 
 export const useGetFavorites = () => {
+    const token = localStorage.getItem('token'); // 👈 Get the token
+
     return useQuery({
         queryKey: ['favorites'],
         queryFn: () => api('/user/favorites') as Promise<FavoritesResponse>,
+        enabled: !!token, // 👈 ONLY run query if token exists
     })
 }
 
