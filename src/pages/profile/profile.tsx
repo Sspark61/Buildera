@@ -266,7 +266,7 @@ const Profile = () => {
                                                     </div>
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-xs text-muted-foreground">
-                                                            Budget: {build.budget !== null && build.budget !== undefined ? `$${build.budget.toLocaleString()}` : 'No budget set'}
+                                                            Budget: {build.budget !== null && build.budget !== undefined ? `$${Number(build.budget).toLocaleString()}` : 'No budget set'}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
                                                             {new Date(build.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
