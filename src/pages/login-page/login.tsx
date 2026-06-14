@@ -1,4 +1,3 @@
-
 import loginImg from '/src/assets/images/login.jpg'
 import builderaLogo from "@/assets/images/buildera-new-logo.png";
 import builderalight from "@/assets/images/buildera_logo_whitemode.png";
@@ -7,7 +6,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../../hooks/useLogin'
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from "@/hooks/use-theme";
 
 export default function Login() {
@@ -15,7 +14,11 @@ export default function Login() {
     const [loginError, setLoginError] = useState('')
     const { mutate: login, isPending } = useLogin()
     const navigate = useNavigate()
+    const location = useLocation() // 1. Access the location context to check for state metadata
     const { theme } = useTheme()
+
+    // 2. Check where they came from, default back to home ('/') if they navigated directly to login
+    const from = location.state?.from?.pathname || '/';
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 min-h-screen bg-(--background)">
@@ -55,7 +58,8 @@ export default function Login() {
                                 { email: values.email, password: values.password },
                                 {
                                     onSuccess: () => {
-                                        navigate('/')
+                                        // 3. Redirect back to the dynamic 'from' path instead of a static target
+                                        navigate(from, { replace: true })
                                     },
                                     onError: () => {
                                         setLoginError('*Invalid email or password')
