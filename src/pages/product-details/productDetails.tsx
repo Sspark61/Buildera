@@ -30,7 +30,7 @@ const usePriceHistory = (name: string) => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
-    
+
 
     useEffect(() => {
         if (!name) return
@@ -349,15 +349,26 @@ const ProductDetail = () => {
                                 ))}
                             </ul>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+                        <div className="flex flex-col gap-3 mt-auto w-full">
+                            {/* Add to Build Button */}
                             <Button
                                 size="lg"
-                                className="flex-1 gap-2 p-5"
+                                className="w-full gap-2 p-5 font-heading font-semibold text-sm sm:text-base"
                                 onClick={() => navigate("/builder")}
                             >
                                 <Plus className="w-4 h-4" /> Add to Build
                             </Button>
-                            <FavoriteButton componentId={product.id} className="w-12 h-10 rounded-lg" />
+
+                            {/* Full Width Add to Favorites Button Wrapper */}
+                            <div className="w-full h-12 rounded-md border border-border bg-card text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-3 font-heading font-semibold text-sm shadow-sm relative">
+                                <FavoriteButton
+                                    componentId={product.id}
+                                    className="bg-transparent hover:bg-transparent border-0 shadow-none h-full !w-auto px-0 flex items-center justify-center"
+                                />
+                                <span className="text-sm font-heading font-semibold select-none pointer-events-none">
+                                    Add to Favorites
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
