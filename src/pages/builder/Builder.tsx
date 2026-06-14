@@ -116,13 +116,13 @@ const ComponentBrowser = ({
                     </SheetTitle>
                 </SheetHeader>
                 <div className="mt-4 space-y-3">
-                    <div className="relative">
+                    <div className="relative w-[92%] mx-auto">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             placeholder={`Search ${category.label.toLowerCase()}...`}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 bg-muted/30 border-border"
+                            className="pl-9 bg-muted/30 border-border "
                         />
                     </div>
                     <div className="space-y-2 mt-2">
@@ -136,7 +136,7 @@ const ComponentBrowser = ({
                                 <button
                                     key={c.id}
                                     onClick={() => { onSelect(c); onOpenChange(false) }}
-                                    className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${isSelected
+                                    className={`text-left p-3 rounded-lg border transition-all flex items-center gap-3 w-[92%] mx-auto ${isSelected
                                         ? "border-primary bg-primary/5"
                                         : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
                                         }`}
