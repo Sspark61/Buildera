@@ -27,7 +27,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import FavoriteButton from "@/components/favoritebutton/favoriteButton";
-import { useGetProfile, useUpdateProfile, useUploadProfilePic } from "@/hooks/use-profile"; // Assumed hook import name
+import { useGetProfile, useUpdateProfile, useUploadProfilePic } from "@/hooks/use-profile"; 
 import { useGetBuilds, useDeleteBuild } from '@/hooks/use-builds'
 import { Link } from 'react-router-dom';
 import { useGetFavorites } from '@/hooks/use-favorites'
@@ -35,7 +35,7 @@ import { useGetFavorites } from '@/hooks/use-favorites'
 const Profile = () => {
     const { data, isLoading, error } = useGetProfile()
     const { mutate: updateProfile, isPending } = useUpdateProfile()
-    const { mutate: uploadProfilePic, isPending: isUploadingPic } = useUploadProfilePic() // Image upload mutation hook
+    const { mutate: uploadProfilePic, isPending: isUploadingPic } = useUploadProfilePic() 
     const { mutate: deleteBuild } = useDeleteBuild()
     const [deletingId, setDeletingId] = useState<number | null>(null)
     const [buildToDelete, setBuildToDelete] = useState<{ id: number, name: string | null } | null>(null)
@@ -43,12 +43,11 @@ const Profile = () => {
     const favorites = favoritesData?.data ?? []
     const queryClient = useQueryClient()
     
-    // File input DOM reference
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         queryClient.invalidateQueries({ queryKey: ['builds'] })
-    }, [])
+    }, [queryClient])
 
     const { data: buildsData, isLoading: buildsLoading } = useGetBuilds({
         refetchOnMount: true,
@@ -69,12 +68,14 @@ const Profile = () => {
     const profile = data?.data
 
     const initials = profile?.userName
-        .split(" ")
-        .map((n) => n[0])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join("")
-        .toUpperCase() ?? "U"
+        ? profile.userName
+            .split(" ")
+            .map((n) => n[0])
+            .filter(Boolean)
+            .slice(0, 2)
+            .join("")
+            .toUpperCase()
+        : "U"
 
     const stats = [
         { label: "My builds", value: builds.length.toString() },
@@ -99,8 +100,8 @@ const Profile = () => {
                 setIsEditing(false)
                 setUpdateError('')
             },
-            onError: (error) => {
-                setUpdateError(error.message)
+            onError: (error: any) => {
+                setUpdateError(error.message || "Failed to update profile configurations")
             }
         })
     }
@@ -117,41 +118,39 @@ const Profile = () => {
         })
     }
 
-    // Trigger file selection window
     const handleAvatarButtonClick = () => {
         fileInputRef.current?.click()
     }
 
-    // Process file selection and initiate API multipart submission
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0]
         if (!file) return
 
         const formData = new FormData()
-        formData.append("image", file) // Key matches the backend form parameter requirement
+        formData.append("image", file)
 
         uploadProfilePic(formData, {
             onError: (err: any) => {
-                alert(err?.message || "Failed to upload image profile picture")
+                alert(err?.message || "Failed to upload profile picture")
             }
         })
     }
 
     if (isLoading) return (
-        <div className="flex items-center justify-center min-h-screen">
-            <p className="text-sm text-muted-foreground">Loading profile...</p>
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground ml-2">Loading profile...</p>
         </div>
     )
 
     if (error || !profile) return (
-        <div className="flex items-center justify-center min-h-screen">
-            <p className="text-sm text-muted-foreground">Failed to load profile.</p>
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <p className="text-sm text-destructive font-medium">Failed to load profile. Please check your authentication.</p>
         </div>
     )
 
     return (
         <div className="p-4 lg:p-8 space-y-6 max-w-6xl mx-auto">
-            {/* Hidden native input handler */}
             <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -214,9 +213,11 @@ const Profile = () => {
                                     <span className="inline-flex items-center gap-1.5">
                                         <Mail className="w-3.5 h-3.5" /> {profile.email}
                                     </span>
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Phone className="w-3.5 h-3.5" /> {profile.phone}
-                                    </span>
+                                    {profile.phone && (
+                                        <span className="inline-flex items-center gap-1.5">
+                                            <Phone className="w-3.5 h-3.5" /> {profile.phone}
+                                        </span>
+                                    )}
                                     <span className="inline-flex items-center gap-1.5">
                                         <Calendar className="w-3.5 h-3.5" /> Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                                     </span>
@@ -255,6 +256,7 @@ const Profile = () => {
                             )}
                         </TabsTrigger>
                     </TabsList>
+                    
                     <TabsContent value="builds" className="mt-4">
                         {buildsLoading ? (
                             <p className="text-sm text-muted-foreground text-center py-10">Loading builds...</p>
@@ -303,6 +305,7 @@ const Profile = () => {
                             </div>
                         )}
                     </TabsContent>
+                    
                     <TabsContent value="wishlist" className="mt-4">
                         {favoritesLoading ? (
                             <p className="text-sm text-muted-foreground text-center py-10">Loading wishlist...</p>
@@ -324,7 +327,7 @@ const Profile = () => {
                                 {favorites.map((item, i) => (
                                     <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
                                         <Link to={`/marketplace/${item.id}`}>
-                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative -p-1">
+                                            <Card className="overflow-hidden group cursor-pointer hover:border-primary/30 transition-colors relative">
                                                 <div className="absolute top-2 right-2 z-10">
                                                     <FavoriteButton componentId={item.id} />
                                                 </div>
