@@ -1,5 +1,6 @@
 import { Heart } from 'lucide-react'
 import { useGetFavorites, useAddFavorite, useRemoveFavorite } from '@/hooks/use-favorites'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 interface FavoriteButtonProps {
     componentId: number
@@ -7,6 +8,8 @@ interface FavoriteButtonProps {
 }
 
 const FavoriteButton = ({ componentId, className = '' }: FavoriteButtonProps) => {
+    const navigate = useNavigate()
+    const location = useLocation()
     const { data } = useGetFavorites()
     const { mutate: addFavorite, isPending: isAdding } = useAddFavorite()
     const { mutate: removeFavorite, isPending: isRemoving } = useRemoveFavorite()
@@ -17,7 +20,16 @@ const FavoriteButton = ({ componentId, className = '' }: FavoriteButtonProps) =>
     const handleClick = (e: React.MouseEvent) => {
         e.preventDefault()  // prevent navigation if inside a Link
         e.stopPropagation()
+
+        // 🔒 GUARD FOR GUESTS: Bounce to login if there's no auth token
+        const token = localStorage.getItem('token')
+        if (!token) {
+            navigate("/login", { state: { from: location } })
+            return
+        }
+
         if (isPending) return
+
         if (isFavorited) {
             removeFavorite(componentId)
         } else {

@@ -1,7 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/immutability */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
@@ -18,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -116,13 +112,13 @@ const ComponentBrowser = ({
                     </SheetTitle>
                 </SheetHeader>
                 <div className="mt-4 space-y-3">
-                    <div className="relative">
+                    <div className="relative w-[92%] mx-auto">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             placeholder={`Search ${category.label.toLowerCase()}...`}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-9 bg-muted/30 border-border"
+                            className="pl-9 bg-muted/30 border-border "
                         />
                     </div>
                     <div className="space-y-2 mt-2">
@@ -136,7 +132,7 @@ const ComponentBrowser = ({
                                 <button
                                     key={c.id}
                                     onClick={() => { onSelect(c); onOpenChange(false) }}
-                                    className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${isSelected
+                                    className={`text-left p-3 rounded-lg border transition-all flex items-center gap-3 w-[92%] mx-auto ${isSelected
                                         ? "border-primary bg-primary/5"
                                         : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
                                         }`}
@@ -378,8 +374,11 @@ const syncBuildSelections = async (
 
 // ---- Main Builder ----
 const Builder = () => {
-    const [searchParams] = useSearchParams()
+    const [searchParams, setSearchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
+    const preselectId = searchParams.get('preselectId')
+    const preselectType = searchParams.get('preselectType')
+    const preselectName = searchParams.get('preselectName')
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -409,6 +408,7 @@ const Builder = () => {
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const navigate = useNavigate()
+    const location = useLocation();
 
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
@@ -443,6 +443,118 @@ const Builder = () => {
         }
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
+
+    // 💡 IMPROVED HOOK: Reliably auto-select items passed from the marketplace
+    useEffect(() => {
+        if (!preselectId || !preselectType) return;
+
+        const catKey = Object.entries(categoryTypeMap).find(
+            ([, apiValue]) => apiValue.toLowerCase() === preselectType.toLowerCase()
+        )?.[0];
+
+        if (!catKey) return;
+
+        const componentIdNum = Number(preselectId);
+
+        // If we are loading an existing saved build, wait until it is fully seeded
+        // This stops the URL parameter from fighting with the database data loading process
+        if (existingBuildId && !seeded) {
+            return;
+        }
+
+        const performPreselection = async () => {
+            if (activeBuildId) {
+                setIsAddingComponent(true);
+                try {
+                    const existing = selections[catKey];
+                    if (existing) {
+                        await api(`/builds/${activeBuildId}/components/${existing.id}`, {
+                            method: 'DELETE',
+                        });
+                    }
+
+                    await api(`/builds/${activeBuildId}/components`, {
+                        method: 'POST',
+                        body: JSON.stringify({ componentId: componentIdNum }),
+                    });
+
+                    await syncBuildSelections(activeBuildId, setSelections);
+                    setIsSaved(true);
+                } catch (err) {
+                    console.error("Failed to sync preselected item to saved build:", err);
+                } finally {
+                    setIsAddingComponent(false);
+                }
+            } else {
+                // If it's a completely new build configuration
+                const decodedName = preselectName ? decodeURIComponent(preselectName) : "";
+
+                // Set initial placeholder immediately so the UI is responsive
+                const provisionalComponent: ApiComponent = {
+                    id: componentIdNum,
+                    name: decodedName || "Loading component details...",
+                    type: preselectType,
+                    brand: "",
+                    price: null,
+                    imageUrl: "",
+                };
+
+                setSelections((prev) => ({ ...prev, [catKey]: provisionalComponent }));
+                setIsSaved(false);
+
+                try {
+                    // Fetch components of this specific type to narrow down search results drastically
+                    const typeParam = categoryTypeMap[catKey];
+                    const res = await api(`/components?type=${encodeURIComponent(typeParam)}&limit=100`);
+
+                    // Look through the list directly for a strict ID match
+                    const matchedItem = res?.data?.components?.find((c: any) => c.id === componentIdNum);
+
+                    if (matchedItem) {
+                        setSelections((prev) => ({
+                            ...prev,
+                            [catKey]: {
+                                id: matchedItem.id,
+                                name: matchedItem.name,
+                                type: matchedItem.type,
+                                brand: matchedItem.brand,
+                                price: matchedItem.price,
+                                imageUrl: matchedItem.imageUrl,
+                            },
+                        }));
+                    } else if (decodedName) {
+                        // Backup strategy: Try to query explicitly by name if ID isn't present in the type list chunk
+                        const fallbackRes = await api(`/components?search=${encodeURIComponent(decodedName)}&limit=5`);
+                        const fallbackMatch = fallbackRes?.data?.components?.find((c: any) => c.id === componentIdNum);
+                        if (fallbackMatch) {
+                            setSelections((prev) => ({
+                                ...prev,
+                                [catKey]: {
+                                    id: fallbackMatch.id,
+                                    name: fallbackMatch.name,
+                                    type: fallbackMatch.type,
+                                    brand: fallbackMatch.brand,
+                                    price: fallbackMatch.price,
+                                    imageUrl: fallbackMatch.imageUrl,
+                                },
+                            }));
+                        }
+                    }
+                } catch (err) {
+                    console.error("Could not fetch full component metadata details:", err);
+                }
+            }
+
+            // Clean up url parameters safely
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('preselectId');
+            newParams.delete('preselectType');
+            newParams.delete('preselectName');
+            setSearchParams(newParams, { replace: true });
+        };
+
+        performPreselection();
+    }, [preselectId, preselectType, activeBuildId, seeded, existingBuildId, searchParams, setSearchParams]);
 
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
@@ -554,6 +666,12 @@ const Builder = () => {
     }
 
     const handleSave = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate("/login", { state: { from: location } });
+            return;
+        }
+
         setSaveError('')
 
         if (activeBuildId) {
@@ -574,7 +692,7 @@ const Builder = () => {
                     message: err.message
                 }])
             })
-            return
+            return;
         }
 
         createBuild(

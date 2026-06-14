@@ -16,25 +16,27 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
-import FavoriteButton from "@/components/favoritebutton/favoriteButton"
+import FavoriteButton from "@/components/favoritebutton/favoriteButton";
 import { useGetComponents } from "@/hooks/use-components";
 
 type ViewMode = "grid" | "list";
 
-const allCategories = ["CPU",
+const allCategories = [
+    "CPU",
     "CPU Cooler",
     "Case",
     "Memory",
     "Motherboard",
     "Power Supply",
     "Video Card",
-    "Storage"]
-const PRICE_MIN = 0
-const PRICE_MAX = 2500
+    "Storage"
+];
+const PRICE_MIN = 0;
+const PRICE_MAX = 2500;
 
 const Marketplace = () => {
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1)
+    const [page, setPage] = useState(1);
     const [view, setView] = useState<ViewMode>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -61,12 +63,12 @@ const Marketplace = () => {
         maxPrice: priceRange[1],
         page,
         limit: 20,
-    })
+    });
 
-    const products = data?.data.components ?? []
+    const products = data?.data.components ?? [];
 
     return (
-        <div className="p-4 lg:p-8">
+        <div className="p-4 lg:p-8 max-w-full overflow-x-hidden"> {/* Added overflow safety guard */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="flex items-center justify-between mb-6">
                     <div>
@@ -194,6 +196,7 @@ const Marketplace = () => {
                         </PopoverContent>
                     </Popover>
                 </div>
+
                 {activeFilterCount > 0 && (
                     <div className="flex flex-wrap gap-2 mb-6">
                         {selectedCategories.map((c) => (
@@ -223,13 +226,14 @@ const Marketplace = () => {
                         </button>
                     </div>
                 )}
+
                 {isLoading ? (
                     <div className="text-center py-16">
                         <p className="text-sm text-muted-foreground">Loading...</p>
                     </div>
                 ) : error ? (
                     <div className="text-center py-16">
-                        <p className="text-sm text-(--destructive)">Failed to load products.</p>
+                        <p className="text-sm text-destructive">Failed to load products.</p>
                     </div>
                 ) : products.length === 0 ? (
                     <div className="text-center py-16 border border-dashed border-border rounded-xl">
@@ -239,36 +243,43 @@ const Marketplace = () => {
                         </Button>
                     </div>
                 ) : view === "grid" ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
                         {products.map((product, i) => (
                             <motion.div
                                 key={product.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.04 }}
+                                className="min-w-0 w-full" // Force the grid item container to respect the column track size
                             >
-                                <Link to={`/marketplace/${product.id}`} className="block">
-                                    <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative">
+                                <Link to={`/marketplace/${product.id}`} className="block w-full">
+                                    <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full h-full flex flex-col -p-1">
                                         <div className="absolute top-2 right-2 z-10">
                                             <FavoriteButton componentId={product.id} />
                                         </div>
-                                        <div className="aspect-square overflow-hidden -m-4">
+
+                                        {/* 💡 FIX 2: Wrapped image in an aspect container that can't grow past its column size */}
+                                        <div className="aspect-square overflow-hidden bg-muted w-full shrink-0">
                                             <img
                                                 src={product.imageUrl}
                                                 alt={product.name}
                                                 loading="lazy"
-                                                width={512}
-                                                height={512}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
                                         </div>
-                                        <div className="p-3">
-                                            <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1">
-                                                {product.type}
-                                            </Badge>
-                                            <h3 className="text-sm font-heading font-semibold text-foreground truncate">{product.name}</h3>
-                                            <p className="text-[10px] text-muted-foreground mb-3">{product.brand}</p>
-                                            <span className="text-base font-heading font-bold gradient-text">{product.price ? `$${product.price}` : 'Price unavailable'}</span>
+                                        <div className="p-3 flex-1 flex flex-col justify-between min-w-0">
+                                            <div className="min-w-0">
+                                                <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1">
+                                                    {product.type}
+                                                </Badge>
+                                                <h3 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate w-full">
+                                                    {product.name}
+                                                </h3>
+                                                <p className="text-[10px] text-muted-foreground mb-2 truncate">{product.brand}</p>
+                                            </div>
+                                            <span className="text-sm sm:text-base font-heading font-bold gradient-text block mt-auto">
+                                                {product.price ? `$${product.price}` : 'Price unavailable'}
+                                            </span>
                                         </div>
                                     </Card>
                                 </Link>
@@ -276,45 +287,44 @@ const Marketplace = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3">
+                    /* 💡 FIX 3: Added 'w-full' directly to the list container wrapper as well */
+                    <div className="flex flex-col gap-3 w-full">
                         {products.map((product, i) => (
                             <motion.div
                                 key={product.id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.03 }}
+                                className="w-full"
                             >
-                                <Link to={`/marketplace/${product.id}`} className="block">
-                                    <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer">
-                                        <div className="flex gap-4 p-3">
-                                            <div className="absolute top-2 right-2 z-10">
-                                                <FavoriteButton componentId={product.id} />
-                                            </div>
-                                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
+                                <Link to={`/marketplace/${product.id}`} className="block w-full">
+                                    <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full">
+                                        <div className="absolute top-3 right-3 z-10">
+                                            <FavoriteButton componentId={product.id} />
+                                        </div>
+
+                                        <div className="flex gap-3 sm:gap-4 p-3 min-w-0 items-center w-full">
+                                            <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
                                                 <img
                                                     src={product.imageUrl}
                                                     alt={product.name}
                                                     loading="lazy"
-                                                    width={256}
-                                                    height={256}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />
                                             </div>
-                                            <div className="flex-1 min-w-0 flex flex-col">
-                                                <div className="flex items-start justify-between gap-3 mb-1">
-                                                    <div className="min-w-0">
-                                                        <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1.5">
-                                                            {product.type}
-                                                        </Badge>
-                                                        <h3 className="text-sm sm:text-base font-heading font-semibold text-foreground truncate">
-                                                            {product.name}
-                                                        </h3>
-                                                        <p className="text-xs text-muted-foreground">{product.brand}</p>
-                                                    </div>
-                                                    <span className="text-base sm:text-lg font-heading font-bold gradient-text shrink-0">
-                                                        {product.price ? `$${product.price}` : 'Price unavailable'}
-                                                    </span>
+                                            <div className="flex-1 min-w-0 pr-6 sm:pr-8">
+                                                <div className="min-w-0">
+                                                    <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-[10px] mb-1">
+                                                        {product.type}
+                                                    </Badge>
+                                                    <h3 className="text-xs sm:text-base font-heading font-semibold text-foreground truncate w-full">
+                                                        {product.name}
+                                                    </h3>
+                                                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 sm:mb-2">{product.brand}</p>
                                                 </div>
+                                                <span className="text-sm sm:text-lg font-heading font-bold gradient-text block">
+                                                    {product.price ? `$${product.price}` : 'Price unavailable'}
+                                                </span>
                                             </div>
                                         </div>
                                     </Card>
@@ -327,7 +337,7 @@ const Marketplace = () => {
                     <button
                         disabled={page === 1}
                         onClick={() => setPage(p => p - 1)}
-                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50"
+                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50 text-foreground bg-background"
                     >
                         Previous
                     </button>
@@ -337,7 +347,7 @@ const Marketplace = () => {
                     <button
                         disabled={page === data?.data.pages}
                         onClick={() => setPage(p => p + 1)}
-                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50"
+                        className="px-4 py-2 border rounded-md text-sm disabled:opacity-50 text-foreground bg-background"
                     >
                         Next
                     </button>

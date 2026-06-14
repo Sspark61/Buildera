@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, ShoppingBag, Wrench, MoreHorizontal, User, Settings, LogIn } from "lucide-react";
+import { Home, ShoppingBag, Wrench, MoreHorizontal, User, Settings, LogIn, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const tabs = [
@@ -9,16 +9,51 @@ const tabs = [
     { to: "/builder", label: "Builder", icon: Wrench },
 ];
 
-const moreItems = [
-    { to: "/profile", label: "Profile", icon: User, desc: "Your account info" },
-    { to: "/settings", label: "Settings", icon: Settings, desc: "App preferences and theme" },
-    { to: "/login", label: "Login", icon: LogIn, desc: "Sign in to your account" },
-];
-
 const MobileNav = () => {
     const location = useLocation();
     const [open, setOpen] = useState(false);
+
+    // 1. Pull dynamic auth state from localStorage
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('userName');
+
+    // 2. Generate dynamic items list based on auth state
+    const moreItems = [
+        { 
+            to: "/profile", 
+            label: username || "Profile", 
+            icon: User, 
+            desc: username ? "View your account info" : "Your account info" 
+        },
+        { 
+            to: "/settings", 
+            label: "Settings", 
+            icon: Settings, 
+            desc: "App preferences and theme" 
+        },
+        token ? { 
+            to: "/", 
+            label: "Sign Out", 
+            icon: LogOut, 
+            desc: "Sign out of your account",
+            isSignOut: true // Flag to identify click event
+        } : { 
+            to: "/login", 
+            label: "Login", 
+            icon: LogIn, 
+            desc: "Sign in to your account" 
+        },
+    ];
+
+    // Check if any of the items are currently active
     const moreActive = moreItems.some((m) => location.pathname === m.to);
+
+    // 3. Define sign-out cleanup routine
+    const handleSignOut = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userName');
+        window.location.href = '/login';
+    };
 
     return (
         <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background glass border-t border-border">
@@ -54,15 +89,20 @@ const MobileNav = () => {
                         <SheetHeader>
                             <SheetTitle className="text-foreground font-heading text-left">More</SheetTitle>
                         </SheetHeader>
-                        <div className="grid grid-cols-1 gap-2 mt-4 pb-4">
+                        <div className="grid grid-cols-1 gap-2 pb-4">
                             {moreItems.map((item) => {
                                 const isActive = location.pathname === item.to;
                                 return (
                                     <Link
-                                        key={item.to}
+                                        key={item.label} // Changed key to item.label since multiple targets could share path "/"
                                         to={item.to}
-                                        onClick={() => setOpen(false)}
-                                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                                        onClick={() => {
+                                            setOpen(false);
+                                            if (item.isSignOut) {
+                                                handleSignOut();
+                                            }
+                                        }}
+                                        className={`flex items-center w-[94%] mx-auto gap-3 p-3 rounded-lg border transition-colors ${
                                         isActive ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-primary/30"
                                         }`}
                                     >
