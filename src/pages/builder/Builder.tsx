@@ -1,10 +1,10 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
 import {
     Monitor, Cpu, CircuitBoard, MemoryStick, HardDrive, Zap, Fan, Box,
-    Plus, Save, FileDown, Sparkles, Trash2, Search, Check, Receipt,
-    Lightbulb, AlertTriangle, CheckCircle2, Wand2,
+    Plus, FileDown, Sparkles, Trash2, Search, Check, Receipt,
+    Lightbulb, AlertTriangle, CheckCircle2, Wand2, Wrench,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ interface ApiComponent {
     brand: string
     price: number | null
     imageUrl: string
-    buildComponentId?: number  // 👈 added
+    buildComponentId?: number
 }
 
 interface CompatibilityError {
@@ -55,7 +55,6 @@ interface CompatibilityError {
     fix?: string
 }
 
-// ---- Category to API type map ----
 const categoryTypeMap: Record<string, string> = {
     cpu: 'CPU',
     gpu: 'Video Card',
@@ -85,8 +84,6 @@ const ComponentBrowser = ({
     const [search, setSearch] = useState("")
     const [debouncedSearch, setDebouncedSearch] = useState("")
     const [page, setPage] = useState(1)
-    
-    // 💡 Keeps track of which list item is currently showing its specs inline
     const [expandedComponentId, setExpandedComponentId] = useState<number | null>(null)
 
     useEffect(() => {
@@ -125,7 +122,7 @@ const ComponentBrowser = ({
                             className="pl-9 bg-muted/30 border-border"
                         />
                     </div>
-                    
+
                     <div className="space-y-2 mt-2">
                         {isLoading ? (
                             <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
@@ -136,17 +133,16 @@ const ComponentBrowser = ({
                             const isExpanded = expandedComponentId === c.id
 
                             return (
-                                <div 
-                                    key={c.id} 
+                                <div
+                                    key={c.id}
                                     className="w-[92%] mx-auto border border-border rounded-lg bg-card overflow-hidden transition-all"
                                     onMouseEnter={() => setExpandedComponentId(c.id)}
                                     onMouseLeave={() => setExpandedComponentId(null)}
                                 >
                                     <button
                                         onClick={() => { onSelect(c); onOpenChange(false) }}
-                                        className={`text-left p-3 transition-all flex items-center gap-3 w-full ${
-                                            isSelected ? "bg-primary/5 border-b border-primary/20" : "hover:bg-muted/20"
-                                        }`}
+                                        className={`text-left p-3 transition-all flex items-center gap-3 w-full ${isSelected ? "bg-primary/5 border-b border-primary/20" : "hover:bg-muted/20"
+                                            }`}
                                     >
                                         <img
                                             src={c.imageUrl}
@@ -179,7 +175,7 @@ const ComponentBrowser = ({
                             )
                         })}
                     </div>
-                    
+
                     {totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 pt-2">
                             <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
@@ -198,11 +194,11 @@ const ComponentBrowser = ({
 }
 
 // ---- InlineSpecsFetcher ----
-const InlineSpecsFetcher = ({ 
-    componentId, defaultBrand, defaultType 
-}: { 
-    componentId: number; 
-    defaultBrand: string; 
+const InlineSpecsFetcher = ({
+    componentId, defaultBrand, defaultType
+}: {
+    componentId: number;
+    defaultBrand: string;
     defaultType: string;
 }) => {
     const { data, isLoading } = useGetComponentDetails(componentId);
@@ -247,12 +243,9 @@ const InlineSpecsFetcher = ({
 
 // ---- BuildSummary ----
 const BuildSummary = ({
-    selections, onSave, isSaving, isSaved,
+    selections,
 }: {
     selections: Record<string, ApiComponent>
-    onSave: () => void
-    isSaving: boolean
-    isSaved: boolean
 }) => {
     const items = Object.entries(selections)
     const total = items.reduce((s, [, c]) => s + (c.price ?? 0), 0)
@@ -287,18 +280,10 @@ const BuildSummary = ({
                     </div>
                 ))}
             </div>
-            <div className="flex justify-between items-baseline pt-3 border-t border-border mb-3">
+            <div className="flex justify-between items-baseline pt-3 border-t border-border">
                 <span className="text-xs text-muted-foreground">Total</span>
                 <span className="text-lg font-heading font-bold gradient-text">${total.toLocaleString()}</span>
             </div>
-            <Button
-                onClick={onSave}
-                disabled={items.length === 0 || isSaving || isSaved}
-                className="w-full gradient-primary text-primary-foreground gap-1.5 h-8 text-xs"
-            >
-                <Save className="w-3.5 h-3.5" />
-                {isSaving ? 'Saving...' : isSaved ? 'Saved ✓' : 'Save Build'}
-            </Button>
         </Card>
     )
 }
@@ -310,16 +295,23 @@ const BuildTips = ({
     selections: Record<string, ApiComponent>
     compatibilityErrors: CompatibilityError[]
 }) => {
-    const tips: { type: "warn" | "ok" | "info"; text: string }[] = []
+    const tips: { type: "warn" | "ok" | "info" | "fix"; text: string }[] = []
 
     compatibilityErrors.forEach(err => {
         tips.push({
             type: err.severity === 'error' ? 'warn' : 'info',
-            text: err.fix ? `${err.message} → ${err.fix}` : err.message
+            text: err.message
         })
+
+        if (err.fix) {
+            tips.push({
+                type: "fix",
+                text: err.fix
+            })
+        }
     })
 
-    const missing = componentCategories.filter((c) => !selections[c.key])
+    const missing = componentCategories.filter((c) => !selections[c.key.toLowerCase()])
     if (missing.length > 0 && missing.length < componentCategories.length && compatibilityErrors.length === 0) {
         tips.push({ type: "info", text: `Missing: ${missing.map((m) => m.label).join(", ")}.` })
     }
@@ -332,14 +324,36 @@ const BuildTips = ({
                 <Lightbulb className="w-4 h-4 text-secondary" />
                 <h3 className="text-sm font-heading font-semibold text-foreground">Build Intelligence</h3>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
                 {tips.map((tip, i) => {
-                    const Icon = tip.type === "warn" ? AlertTriangle : tip.type === "ok" ? CheckCircle2 : Lightbulb
-                    const color = tip.type === "warn" ? "text-destructive" : tip.type === "ok" ? "text-primary" : "text-muted-foreground"
+                    const Icon = tip.type === "warn"
+                        ? AlertTriangle
+                        : tip.type === "ok"
+                            ? CheckCircle2
+                            : tip.type === "fix"
+                                ? Wrench
+                                : Lightbulb
+
+                    const color = tip.type === "warn"
+                        ? "text-destructive"
+                        : tip.type === "ok"
+                            ? "text-primary"
+                            : tip.type === "fix"
+                                ? "text-sky-500 dark:text-sky-400"
+                                : "text-muted-foreground"
+
                     return (
-                        <div key={i} className="flex gap-2 items-start">
+                        <div key={i} className="flex gap-2.5 items-start border-b border-border/40 last:border-none pb-2.5 last:pb-0">
                             <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${color}`} />
-                            <p className="text-xs text-muted-foreground leading-relaxed">{tip.text}</p>
+                            <div className="flex-1">
+                                <p className={`text-xs leading-relaxed ${tip.type === "fix"
+                                    ? "text-muted-foreground font-sans font-normal"
+                                    : "text-foreground font-medium"
+                                    }`}>
+                                    {tip.type === "fix" && <span className="font-semibold text-foreground/80 mr-1">Fix:</span>}
+                                    {tip.text}
+                                </p>
+                            </div>
                         </div>
                     )
                 })}
@@ -412,7 +426,6 @@ const AIBuildPanel = ({ onApplyBuild: _onApplyBuild }: { onApplyBuild: (b: Recor
     )
 }
 
-// ---- Helper to refetch build and sync selections ----
 const syncBuildSelections = async (
     buildId: number,
     setSelections: React.Dispatch<React.SetStateAction<Record<string, ApiComponent>>>
@@ -438,7 +451,7 @@ const syncBuildSelections = async (
     setSelections(mapped)
 }
 
-// ---- Main Builder ----
+// ---- Main Builder Component ----
 const Builder = () => {
     const [searchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
@@ -449,6 +462,7 @@ const Builder = () => {
             queryClient.invalidateQueries({ queryKey: ['builds', Number(existingBuildId)] })
         }
     }, [])
+
     const { data: existingBuildData, isLoading: isBuildLoading } = useGetBuild(
         existingBuildId ? Number(existingBuildId) : 0
     )
@@ -464,10 +478,9 @@ const Builder = () => {
     const [buildPurpose, setBuildPurpose] = useState("Gaming")
     const [budget, setBudget] = useState("")
     const [activeBuildId, setActiveBuildId] = useState<number | null>(null)
-    const [_saveError, setSaveError] = useState('')
     const [isSaved, setIsSaved] = useState(false)
     const [isAddingComponent, setIsAddingComponent] = useState(false)
-    const [isLocalSaving, setIsLocalSaving] = useState(false) // 👈 Added local state wrapper to manually track asynchronous loop states
+    const [isLocalSaving, setIsLocalSaving] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -476,7 +489,6 @@ const Builder = () => {
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
 
-    // ---- Seed from existing build ----
     useEffect(() => {
         if (!existingBuildId || seeded || !existingBuildData?.data) return
         const b = existingBuildData.data
@@ -507,6 +519,42 @@ const Builder = () => {
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
 
+    // ---- Debounce Build Metadata Autosave Updates ----
+    useEffect(() => {
+        if (!activeBuildId) return;
+
+        const delayDebounceFn = setTimeout(() => {
+            setIsLocalSaving(true);
+
+            // 1. Build the body dynamically
+            const payload: Record<string, any> = {
+                name: buildName,
+                purpose: buildPurpose,
+            };
+
+            // 2. Only attach budget if the user actually typed a value
+            if (budget.trim() !== "") {
+                payload.budget = Number(budget);
+            }
+
+            api(`/builds/${activeBuildId}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload), // 🎯 Key is completely omitted if blank
+            })
+                .then(() => {
+                    setIsSaved(true);
+                })
+                .catch((err) => {
+                    console.error("Failed to auto-save build details:", err);
+                })
+                .finally(() => {
+                    setIsLocalSaving(false);
+                });
+        }, 1000);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [buildName, buildPurpose, budget, activeBuildId]);
+
     const openBrowser = (category: ComponentCategory) => {
         setActiveCategory(category)
         setBrowserOpen(true)
@@ -515,14 +563,44 @@ const Builder = () => {
     const handleSelect = async (component: ApiComponent) => {
         if (!activeCategory) return
 
-        if (activeBuildId) {
-            setIsAddingComponent(true)
-            setCompatibilityErrors([])
+        setIsAddingComponent(true)
+        setCompatibilityErrors([])
+        setIsSaved(false)
 
-            const existing = selections[activeCategory.key]
+        let currentBuildId = activeBuildId;
+        const existing = selections[activeCategory.key]
+
+        try {
+            // Step 1: Initialize new build record on backend if it doesn't exist yet
+            if (!currentBuildId) {
+                // 1. Build the payload dynamically
+                const buildPayload: Record<string, any> = {
+                    name: buildName,
+                    purpose: buildPurpose
+                };
+
+                // 2. Only attach budget if it's not blank
+                if (budget.trim() !== "") {
+                    buildPayload.budget = Number(budget);
+                }
+
+                const newBuildResponse: any = await new Promise((resolve, reject) => {
+                    createBuild(
+                        buildPayload as any,
+                        {
+                            onSuccess: (data) => resolve(data),
+                            onError: (err) => reject(err)
+                        }
+                    );
+                });
+                currentBuildId = newBuildResponse.data.id;
+                setActiveBuildId(currentBuildId);
+            }
+
+            // Step 2: Clear old slot component if it exists
             if (existing) {
                 try {
-                    await api(`/builds/${activeBuildId}/components/${existing.id}`, {
+                    await api(`/builds/${currentBuildId}/components/${existing.id}`, {
                         method: 'DELETE',
                     })
                 } catch (err) {
@@ -530,59 +608,49 @@ const Builder = () => {
                 }
             }
 
-            try {
-                await api(`/builds/${activeBuildId}/components`, {
-                    method: 'POST',
-                    body: JSON.stringify({ componentId: component.id }),
-                })
+            // Step 3: Add new component
+            await api(`/builds/${currentBuildId}/components`, {
+                method: 'POST',
+                body: JSON.stringify({ componentId: component.id }),
+            })
 
-                await syncBuildSelections(activeBuildId, setSelections)
-                setCompatibilityErrors([])
-                setIsSaved(true)
+            // Step 4: Complete Success Handler
+            await syncBuildSelections(currentBuildId!, setSelections)
+            setCompatibilityErrors([])
+            setIsSaved(true)
 
-            } catch (err: any) {
-                if (existing) {
-                    try {
-                        await api(`/builds/${activeBuildId}/components`, {
-                            method: 'POST',
-                            body: JSON.stringify({ componentId: existing.id }),
-                        })
-                        await syncBuildSelections(activeBuildId, setSelections)
-                    } catch {
-                        console.error('Failed to restore old component')
-                    }
-                }
+        } catch (err: any) {
+            console.error("Caught rich validation error:", err);
 
-                try {
-                    const parsed = JSON.parse(err.message)
-                    if (parsed.data?.errors?.length) {
-                        setCompatibilityErrors(parsed.data.errors)
-                    } else if (parsed.data?.warnings?.length) {
-                        setCompatibilityErrors(parsed.data.warnings)
-                    } else {
-                        setCompatibilityErrors([{
-                            severity: 'error',
-                            rule: 'UNKNOWN',
-                            components: [],
-                            message: parsed.message || 'Failed to add component'
-                        }])
-                    }
-                } catch {
-                    setCompatibilityErrors([{
-                        severity: 'error',
-                        rule: 'UNKNOWN',
-                        components: [],
-                        message: err.message
-                    }])
-                }
-            } finally {
-                setIsAddingComponent(false)
+            if (err.data?.errors?.length) {
+                setCompatibilityErrors(err.data.errors)
+            } else if (err.data?.warnings?.length) {
+                setCompatibilityErrors(err.data.warnings)
+            } else {
+                setCompatibilityErrors([{
+                    severity: 'error',
+                    rule: 'INCOMPATIBILITY',
+                    components: [],
+                    message: err.message || 'Incompatible component configuration.'
+                }])
             }
 
-        } else {
-            setSelections(prev => ({ ...prev, [activeCategory.key]: component }))
-            setCompatibilityErrors([])
-            setIsSaved(false)
+            if (currentBuildId && existing) {
+                try {
+                    await api(`/builds/${currentBuildId}/components`, {
+                        method: 'POST',
+                        body: JSON.stringify({ componentId: existing.id }),
+                    })
+                } catch {
+                    console.error('Failed to restore old component')
+                }
+            }
+
+            if (currentBuildId !== null) {
+                await syncBuildSelections(currentBuildId, setSelections)
+            }
+        } finally {
+            setIsAddingComponent(false)
         }
     }
 
@@ -612,72 +680,12 @@ const Builder = () => {
         setCompatibilityErrors([])
     }
 
-    const handleSave = () => {
-        setSaveError('')
-        setIsLocalSaving(true) // 👈 Turn saving state on immediately
-
-        if (activeBuildId) {
-            api(`/builds/${activeBuildId}`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    name: buildName,
-                    purpose: buildPurpose,
-                    budget: Number(budget) || 0,
-                }),
-            }).then(() => {
-                setIsSaved(true)
-            }).catch((err) => {
-                setCompatibilityErrors([{
-                    severity: 'error',
-                    rule: 'UNKNOWN',
-                    components: [],
-                    message: err.message
-                }])
-            }).finally(() => {
-                setIsLocalSaving(false) // 👈 Turn saving state off when done updating
-            })
-            return
-        }
-
-        createBuild(
-            { name: buildName, purpose: buildPurpose, budget: Number(budget) || 0 },
-            {
-                onSuccess: async (data) => {
-                    const buildId = data.data.id
-                    setActiveBuildId(buildId)
-
-                    // Loop runs asynchronously, keeping state active until everything completes
-                    for (const component of Object.values(selections)) {
-                        try {
-                            await api(`/builds/${buildId}/components`, {
-                                method: 'POST',
-                                body: JSON.stringify({ componentId: component.id }),
-                            })
-                        } catch (err) {
-                            console.error(`Failed to add ${component.name}:`, err)
-                        }
-                    }
-
-                    await syncBuildSelections(buildId, setSelections)
-                    setIsSaved(true)
-                    setSaveError('')
-                    setIsLocalSaving(false) // 👈 Turn saving state off *only* after loop ends completely
-                },
-                onError: (error) => {
-                    setSaveError(error.message)
-                    setIsLocalSaving(false) // 👈 Safety clear on error
-                }
-            }
-        )
-    }
-
     const handleNewBuild = () => {
         setSelections({})
         setBuildName("My Custom Build")
         setBuildPurpose("Gaming")
         setBudget("")
         setActiveBuildId(null)
-        setSaveError('')
         setIsSaved(false)
         setCompatibilityErrors([])
         setSeeded(false)
@@ -687,13 +695,11 @@ const Builder = () => {
         if (!activeBuildId) return
         deleteBuild(activeBuildId, {
             onSuccess: () => navigate('/profile'),
-            onError: (error) => setSaveError(error.message)
+            onError: (error) => console.error("Failed to delete build:", error.message)
         })
     }
 
     const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
-
-    // 👈 Combine with our local hook to keep UI synchronized perfectly
     const isSaving = isCreating || isAddingComponent || isLocalSaving
 
     if (existingBuildId && isBuildLoading) {
@@ -705,15 +711,14 @@ const Builder = () => {
     }
 
     return (
-        <div className="p-4 lg:p-8 max-w-7xl mx-auto">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+        <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground pb-16 md:pb-0">
+            <header className="p-4 lg:p-6 border-b border-border shrink-0 bg-background/95 backdrop-blur">
+                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1 min-w-0 space-y-2">
                         <Input
                             value={buildName}
                             onChange={(e) => { setBuildName(e.target.value); setIsSaved(false) }}
-                            className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-2 h-auto focus-visible:ring-0 max-w-md"
+                            className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md"
                         />
                         <div className="flex gap-2 flex-wrap">
                             <Input
@@ -736,6 +741,19 @@ const Builder = () => {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-medium transition-all mr-2">
+                            {isSaving ? (
+                                <span className="flex items-center gap-1.5 animate-pulse text-primary">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
+                                    Saving...
+                                </span>
+                            ) : activeBuildId ? (
+                                <span className="text-muted-foreground/70">All changes saved ✓</span>
+                            ) : (
+                                <span className="text-muted-foreground/50 italic">Unsaved build</span>
+                            )}
+                        </span>
+
                         <Button variant="outline" size="sm" onClick={handleNewBuild} className="border-border text-muted-foreground gap-1.5">
                             <FileDown className="w-3.5 h-3.5" /> New
                         </Button>
@@ -749,86 +767,92 @@ const Builder = () => {
                                 <Trash2 className="w-3.5 h-3.5" /> Delete
                             </Button>
                         )}
-                        <Button
-                            size="sm"
-                            onClick={handleSave}
-                            disabled={Object.keys(selections).length === 0 || isSaving || isSaved}
-                            className="gradient-primary neon-glow text-primary-foreground gap-1.5"
-                        >
-                            <Save className="w-3.5 h-3.5" />
-                            {isSaving ? 'Saving...' : isSaved ? 'Saved ✓' : 'Save Build'}
-                        </Button>
                     </div>
                 </div>
-                <Tabs defaultValue="components" className="space-y-6">
-                    <TabsList className="bg-muted/50 border border-border">
-                        <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                            <Box className="w-3.5 h-3.5" /> Components
-                        </TabsTrigger>
-                        <TabsTrigger value="ai" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                            <Sparkles className="w-3.5 h-3.5" /> AI Build
-                        </TabsTrigger>
-                    </TabsList>
+            </header>
 
-                    <TabsContent value="components">
-                        <div className="grid lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2 space-y-3">
-                                <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-                                            <Wand2 className="w-4 h-4 text-primary-foreground" />
+            <main className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 bg-background">
+                <div className="max-w-7xl mx-auto">
+                    <Tabs defaultValue="components" className="space-y-6">
+                        <TabsList className="bg-muted/50 border border-border">
+                            <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
+                                <Box className="w-3.5 h-3.5" /> Components
+                            </TabsTrigger>
+                            <TabsTrigger value="ai" className="gap-1.5 text-xs data-[state=active]:bg-card">
+                                <Sparkles className="w-3.5 h-3.5" /> AI Build
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="components">
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 space-y-3">
+                                    <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+                                                <Wand2 className="w-4 h-4 text-primary-foreground" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
+                                                <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
-                                            <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
-                                        </div>
-                                    </div>
-                                    <Button size="sm" disabled className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0 opacity-60">
-                                        <Wand2 className="w-3.5 h-3.5" /> Coming soon
-                                    </Button>
-                                </Card>
+                                        <Button size="sm" disabled className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0 opacity-60">
+                                            <Wand2 className="w-3.5 h-3.5" /> Coming soon
+                                        </Button>
+                                    </Card>
 
-                                {componentCategories.map((cat, i) => {
-                                    // 💡 BUG FIX: Normalize the category key to lowercase to match the selection dictionary keys perfectly
-                                    const categoryKey = cat.key.toLowerCase();
-                                    const selected = selections[categoryKey];
-                                    const Icon = iconMap[categoryKey] || Box;
+                                    {componentCategories.map((cat) => {
+                                        const categoryKey = cat.key.toLowerCase();
+                                        const selected = selections[categoryKey];
+                                        const Icon = iconMap[categoryKey] || Box;
 
-                                    return (
-                                        <motion.div
-                                            key={cat.key}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: i * 0.04 }}
-                                        >
-                                            <Card className={`p-3 sm:p-4 border transition-all ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"}`}>
-                                                <div className="flex items-center gap-2 sm:gap-3">
-                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"}`}>
+                                        return (
+                                            <Card
+                                                key={cat.key}
+                                                className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
+                                                    }`}
+                                            >
+                                                <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
+                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
+                                                        }`}>
                                                         <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs text-muted-foreground">{cat.label}</p>
+
+                                                    <div className="min-w-0 w-full overflow-hidden">
+                                                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
+                                                            {cat.label}
+                                                        </p>
                                                         {selected ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <img src={selected.imageUrl} alt={selected.name} className="w-6 h-6 rounded object-cover bg-muted" />
-                                                                <h4 className="text-sm font-heading font-semibold text-foreground truncate">{selected.name}</h4>
+                                                            <div className="flex items-center gap-2 min-w-0 mt-0.5">
+                                                                <img
+                                                                    src={selected.imageUrl}
+                                                                    alt={selected.name}
+                                                                    className="w-5 h-5 rounded object-cover bg-muted shrink-0"
+                                                                />
+                                                                <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
+                                                                    {selected.name}
+                                                                </h4>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-sm text-muted-foreground/50 italic">Not selected</p>
+                                                            <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
+                                                                Not selected
+                                                            </p>
                                                         )}
                                                     </div>
+
                                                     {selected && (
-                                                        <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0">
+                                                        <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
                                                             {selected.price ? `$${selected.price}` : 'N/A'}
                                                         </span>
                                                     )}
-                                                    <div className="flex items-center gap-0.5 shrink-0">
+
+                                                    <div className="flex items-center gap-1 shrink-0">
                                                         {selected && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => removeSelection(categoryKey)}
-                                                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                                                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive shrink-0"
                                                                 disabled={isAddingComponent}
                                                             >
                                                                 <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -837,12 +861,11 @@ const Builder = () => {
                                                         <Button
                                                             variant={selected ? "outline" : "default"}
                                                             size="sm"
-                                                            // 💡 Pass the updated data target reference down to initialization wrapper
                                                             onClick={() => openBrowser({ ...cat, key: categoryKey })}
                                                             disabled={isAddingComponent}
                                                             className={selected
-                                                                ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3"
-                                                                : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3"
+                                                                ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3 shrink-0"
+                                                                : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
                                                             }
                                                         >
                                                             {selected ? "Change" : (<><Plus className="w-3 h-3" /> Select</>)}
@@ -850,47 +873,37 @@ const Builder = () => {
                                                     </div>
                                                 </div>
                                             </Card>
-                                        </motion.div>
-                                    )
-                                })}
-                            </div>
+                                        )
+                                    })}
+                                </div>
 
-                            <div className="space-y-4">
-                                <BuildSummary
-                                    selections={selections}
-                                    onSave={handleSave}
-                                    isSaving={isSaving}
-                                    isSaved={isSaved}
-                                />
-                                <BuildTips
-                                    selections={selections}
-                                    compatibilityErrors={compatibilityErrors}
-                                />
+                                <div className="space-y-4">
+                                    <BuildSummary selections={selections} />
+                                    <BuildTips
+                                        selections={selections}
+                                        compatibilityErrors={compatibilityErrors}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </TabsContent>
+                        </TabsContent>
 
-                    <TabsContent value="ai">
-                        <div className="grid lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2">
-                                <AIBuildPanel onApplyBuild={setSelections} />
+                        <TabsContent value="ai">
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2">
+                                    <AIBuildPanel onApplyBuild={setSelections} />
+                                </div>
+                                <div className="space-y-4">
+                                    <BuildSummary selections={selections} />
+                                    <BuildTips
+                                        selections={selections}
+                                        compatibilityErrors={compatibilityErrors}
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-4">
-                                <BuildSummary
-                                    selections={selections}
-                                    onSave={handleSave}
-                                    isSaving={isSaving}
-                                    isSaved={isSaved}
-                                />
-                                <BuildTips
-                                    selections={selections}
-                                    compatibilityErrors={compatibilityErrors}
-                                />
-                            </div>
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </motion.div>
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </main>
 
             {activeCategory && (
                 <ComponentBrowser
@@ -926,4 +939,4 @@ const Builder = () => {
     )
 }
 
-export default Builder
+export default Builder;
