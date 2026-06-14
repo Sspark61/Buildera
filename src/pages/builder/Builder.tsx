@@ -1,7 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-/* eslint-disable react-hooks/immutability */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from "framer-motion";
@@ -18,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -412,6 +408,7 @@ const Builder = () => {
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const navigate = useNavigate()
+    const location = useLocation();
 
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
@@ -669,6 +666,12 @@ const Builder = () => {
     }
 
     const handleSave = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate("/login", { state: { from: location } });
+            return;
+        }
+
         setSaveError('')
 
         if (activeBuildId) {
@@ -689,7 +692,7 @@ const Builder = () => {
                     message: err.message
                 }])
             })
-            return
+            return;
         }
 
         createBuild(
