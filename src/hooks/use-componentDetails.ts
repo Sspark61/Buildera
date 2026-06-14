@@ -10,6 +10,7 @@ interface SingleComponentResponse {
         type: string
         brand: string
         price: number | null
+        urls: string[]
         imageUrl: string
         createdAt: string
         updatedAt: string
