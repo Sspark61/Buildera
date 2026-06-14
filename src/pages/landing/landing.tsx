@@ -12,27 +12,12 @@ import {
     Gauge,
     Star,
     CheckCircle2,
-    Share2,
     Users,
-    ShieldCheck,
-    Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import pcBuild1 from "@/assets/images/pc-build-1.jpg";
-import pcBuild2 from "@/assets/images/pc-build-2.jpg";
-import pcBuild3 from "@/assets/images/pc-build-3.jpg";
-import pcBuild4 from "@/assets/images/pc-build-4.jpg";
-
-const featuredBuilds = [
-    { name: "Neon Vanguard X-1", price: "$2,499", category: "Gaming", img: pcBuild1 },
-    { name: "Alpine Mini Pro", price: "$1,299", category: "Compact", img: pcBuild2 },
-    { name: "Strix GeForce 4090", price: "$3,199", category: "Extreme", img: pcBuild3 },
-    { name: "Neon Strike", price: "$1,899", category: "Streaming", img: pcBuild4 },
-];
-
 const features = [
     {
         icon: Sparkles,
