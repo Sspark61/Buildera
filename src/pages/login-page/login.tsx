@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { useLogin } from '../../hooks/useLogin'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from "@/hooks/use-theme";
-
+import { motion } from "framer-motion";
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [loginError, setLoginError] = useState('')
@@ -31,92 +31,94 @@ export default function Login() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 pb-0 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
-                <h3 className='text-xl font-heading'>Welcome back</h3>
-                <p className='text-sm text-(--muted-foreground) pb-4'>Log in to your account</p>
-                <div>
-                    <Formik
-                        initialValues={{ email: '', password: '' }}
-                        validate={values => {
-                            setLoginError('')
-                            const errors: {
-                                email?: string;
-                                password?: string;
-                            } = {};
-                            if (!values.email) {
-                                errors.email = '*This field is required';
-                            } else if (
-                                !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)
-                            ) {
-                                errors.email = '*Invalid email address';
-                            }
-                            if (!values.password) {
-                                errors.password = '*This field is required';
-                            }
-                            return errors;
-                        }}
-                        onSubmit={(values, { setSubmitting }) => {
-                            login(
-                                { email: values.email, password: values.password },
-                                {
-                                    onSuccess: () => {
-                                        navigate(from, { replace: true })
-                                    },
-                                    onError: () => {
-                                        setLoginError('*Invalid email or password')
-                                        setSubmitting(false)
-                                    },
-                                    onSettled: () => {
-                                        setSubmitting(false)
-                                    }
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+                    <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 pb-0 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
+                    <h3 className='text-xl font-heading'>Welcome back</h3>
+                    <p className='text-sm text-(--muted-foreground) pb-4'>Log in to your account</p>
+                    <div>
+                        <Formik
+                            initialValues={{ email: '', password: '' }}
+                            validate={values => {
+                                setLoginError('')
+                                const errors: {
+                                    email?: string;
+                                    password?: string;
+                                } = {};
+                                if (!values.email) {
+                                    errors.email = '*This field is required';
+                                } else if (
+                                    !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)
+                                ) {
+                                    errors.email = '*Invalid email address';
                                 }
-                            )
-                        }}
-                    >
-                        {({ isSubmitting }) => (
-                            <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
-                                        <Mail size={18} strokeWidth={1.5} color="gray" />
-                                        <Field
-                                            type="email"
+                                if (!values.password) {
+                                    errors.password = '*This field is required';
+                                }
+                                return errors;
+                            }}
+                            onSubmit={(values, { setSubmitting }) => {
+                                login(
+                                    { email: values.email, password: values.password },
+                                    {
+                                        onSuccess: () => {
+                                            navigate(from, { replace: true })
+                                        },
+                                        onError: () => {
+                                            setLoginError('*Invalid email or password')
+                                            setSubmitting(false)
+                                        },
+                                        onSettled: () => {
+                                            setSubmitting(false)
+                                        }
+                                    }
+                                )
+                            }}
+                        >
+                            {({ isSubmitting }) => (
+                                <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
+                                            <Mail size={18} strokeWidth={1.5} color="gray" />
+                                            <Field
+                                                type="email"
+                                                name="email"
+                                                placeholder="Email address"
+                                                className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm"
+                                            />
+                                        </div>
+                                        <ErrorMessage
                                             name="email"
-                                            placeholder="Email address"
-                                            className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm"
+                                            component="div"
+                                            className='text-start text-(--destructive) text-sm mt-1'
                                         />
                                     </div>
-                                    <ErrorMessage
-                                        name="email"
-                                        component="div"
-                                        className='text-start text-(--destructive) text-sm mt-1'
-                                    />
-                                </div>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
-                                        <Lock size={18} strokeWidth={1.5} color="gray" />
-                                        <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm" />
-                                        <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
+                                            <Lock size={18} strokeWidth={1.5} color="gray" />
+                                            <Field id="show" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full placeholder:text-(--muted-foreground) text-sm" />
+                                            <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                        </div>
+                                        <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                        {loginError && (
+                                            <p className='text-sm text-(--destructive) text-start mt-1'>
+                                                *Invalid email or password
+                                            </p>
+                                        )}
+                                        <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-4 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
                                     </div>
-                                    <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                    {loginError && (
-                                        <p className='text-sm text-(--destructive) text-start mt-1'>
-                                            *Invalid email or password
-                                        </p>
-                                    )}
-                                    <Link className='text-(--muted-foreground) text-xs text-start underline *:underline-offset-4 cursor-pointer' to="/forgotPassword">Forgot Password?</Link>
-                                </div>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting || isPending}
-                                    className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
-                                >
-                                    {isPending ? 'Logging in...' : 'Log in'}
-                                </button>
-                                <p className='text-xs text-(--muted-foreground)'>Don't have an account? <Link to="/signup" className="text-(--ring) hover:underline">Sign up</Link></p>
-                            </Form>
-                        )}
-                    </Formik>
-                </div>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || isPending}
+                                        className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
+                                    >
+                                        {isPending ? 'Logging in...' : 'Log in'}
+                                    </button>
+                                    <p className='text-xs text-(--muted-foreground)'>Don't have an account? <Link to="/signup" className="text-(--ring) hover:underline">Sign up</Link></p>
+                                </Form>
+                            )}
+                        </Formik>
+                    </div>
+                </motion.div>
             </div>
         </div>
     )

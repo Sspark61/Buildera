@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useRegister } from '../../hooks/useRegister';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from "@/hooks/use-theme";
+import { motion } from "framer-motion";
 export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const { mutate: signup, isPending } = useRegister()
@@ -25,126 +26,129 @@ export default function Signup() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
-                <h3 className='text-xl font-heading'>Create your account</h3>
-                <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
-                <div>
-                    <Formik
-                        initialValues={{ userName: '', email: '', password: '', cPassword: '' }}
-                        validate={values => {
-                            setSignupError('')
-                            const errors: {
-                                userName?: string;
-                                email?: string;
-                                password?: string;
-                                cPassword?: string;
-                            } = {};
-                            if (!values.userName) {
-                                errors.userName = '*This field is required';
-                            }
-                            if (!values.email) {
-                                errors.email = '*This field is required';
-                            } else if (
-                                !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)
-                            ) {
-                                errors.email = '*Invalid email address';
-                            }
-                            if (!values.password) {
-                                errors.password = '*This field is required';
-                            }
-                            if (!values.cPassword) {
-                                errors.cPassword = '*This field is required';
-                            } else if (values.password !== values.cPassword) {
-                                errors.cPassword = "*Password doesn't match";
-                            }
-                            return errors;
-                        }}
-                        onSubmit={(values, { setSubmitting }) => {
-                            signup(
-                                { email: values.email, userName: values.userName, password: values.password, cPassword: values.cPassword }
-                                ,
-                                {
-                                    onSuccess: () => {
-                                        console.log("all good");
-
-                                        navigate('/login');
-                                    },
-                                    onError: () => {
-                                        setSignupError('*Email already exists or invalid data');
-                                        setSubmitting(false);
-                                    },
-                                    onSettled: () => {
-                                        setSubmitting(false);
-                                    }
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+                    <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
+                    <h3 className='text-xl font-heading'>Create your account</h3>
+                    <p className='text-sm text-(--muted-foreground) pb-4'>Start building your dream PC</p>
+                    <div>
+                        <Formik
+                            initialValues={{ userName: '', email: '', password: '', cPassword: '' }}
+                            validate={values => {
+                                setSignupError('')
+                                const errors: {
+                                    userName?: string;
+                                    email?: string;
+                                    password?: string;
+                                    cPassword?: string;
+                                } = {};
+                                if (!values.userName) {
+                                    errors.userName = '*This field is required';
                                 }
-                            )
-                        }}
-                    >
-                        {({ isSubmitting }) => (
-                            <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
-                                        <User size={16} strokeWidth={2} color="gray" />
+                                if (!values.email) {
+                                    errors.email = '*This field is required';
+                                } else if (
+                                    !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(values.email)
+                                ) {
+                                    errors.email = '*Invalid email address';
+                                }
+                                if (!values.password) {
+                                    errors.password = '*This field is required';
+                                }
+                                if (!values.cPassword) {
+                                    errors.cPassword = '*This field is required';
+                                } else if (values.password !== values.cPassword) {
+                                    errors.cPassword = "*Password doesn't match";
+                                }
+                                return errors;
+                            }}
+                            onSubmit={(values, { setSubmitting }) => {
+                                signup(
+                                    { email: values.email, userName: values.userName, password: values.password, cPassword: values.cPassword }
+                                    ,
+                                    {
+                                        onSuccess: () => {
+                                            console.log("all good");
 
-                                        <Field
-                                            type="text"
+                                            navigate('/login');
+                                        },
+                                        onError: () => {
+                                            setSignupError('*Email already exists or invalid data');
+                                            setSubmitting(false);
+                                        },
+                                        onSettled: () => {
+                                            setSubmitting(false);
+                                        }
+                                    }
+                                )
+                            }}
+                        >
+                            {({ isSubmitting }) => (
+                                <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
+                                            <User size={16} strokeWidth={2} color="gray" />
+
+                                            <Field
+                                                type="text"
+                                                name="userName"
+                                                placeholder="Full name"
+                                                className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
+                                            />
+                                        </div>
+
+                                        <ErrorMessage
                                             name="userName"
-                                            placeholder="Full name"
-                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
+                                            component="div"
+                                            className='text-start text-(--destructive) text-sm mt-1'
                                         />
                                     </div>
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
+                                            <Mail size={16} strokeWidth={1.5} color="gray" />
 
-                                    <ErrorMessage
-                                        name="userName"
-                                        component="div"
-                                        className='text-start text-(--destructive) text-sm mt-1'
-                                    />
-                                </div>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition'>
-                                        <Mail size={16} strokeWidth={1.5} color="gray" />
+                                            <Field
+                                                type="email"
+                                                name="email"
+                                                placeholder="Email address"
+                                                className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
+                                            />
+                                        </div>
 
-                                        <Field
-                                            type="email"
+                                        <ErrorMessage
                                             name="email"
-                                            placeholder="Email address"
-                                            className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm"
+                                            component="div"
+                                            className='text-start text-(--destructive) text-sm mt-1'
                                         />
                                     </div>
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                            <Lock size={16} strokeWidth={2} color="gray" />
+                                            <Field id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
+                                            <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                        </div>
+                                        <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                    </div>
+                                    <div>
+                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                            <Lock size={16} strokeWidth={2} color="gray" />
+                                            <Field id="cPassword" type={showPassword ? "text" : "password"} name="cPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
+                                            <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                        </div>
+                                        <ErrorMessage name="cPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                        {signupError && (
+                                            <p className='text-sm text-(--destructive) text-start'>{signupError}</p>
+                                        )}
+                                    </div>
+                                    <button type="submit" disabled={isSubmitting || isPending} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
+                                        {isPending ? "Creating your account..." : "Create Account"}
+                                    </button>
+                                    <p className='text-xs text-(--muted-foreground)'>Already have an account?  <Link to="/login" className="text-(--ring) hover:underline">Log in</Link></p>
+                                </Form>
+                            )}
 
-                                    <ErrorMessage
-                                        name="email"
-                                        component="div"
-                                        className='text-start text-(--destructive) text-sm mt-1'
-                                    />
-                                </div>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
-                                        <Lock size={16} strokeWidth={2} color="gray" />
-                                        <Field id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
-                                        <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
-                                    </div>
-                                    <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                </div>
-                                <div>
-                                    <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
-                                        <Lock size={16} strokeWidth={2} color="gray" />
-                                        <Field id="cPassword" type={showPassword ? "text" : "password"} name="cPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
-                                        <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
-                                    </div>
-                                    <ErrorMessage name="cPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                    {signupError && (
-                                        <p className='text-sm text-(--destructive) text-start'>{signupError}</p>
-                                    )}
-                                </div>
-                                <button type="submit" disabled={isSubmitting || isPending} className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'>
-                                    {isPending ? "Creating your account..." : "Create Account"}
-                                </button>
-                                <p className='text-xs text-(--muted-foreground)'>Already have an account?  <Link to="/login" className="text-(--ring) hover:underline">Log in</Link></p>
-                            </Form>
-                        )}
-                    </Formik>
-                </div>
+                        </Formik>
+                    </div>
+                </motion.div>
             </div>
         </div>
     )

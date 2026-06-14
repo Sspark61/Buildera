@@ -10,7 +10,7 @@ import { useTheme } from "@/hooks/use-theme";
 import { useResetPassword } from '../../hooks/useResetPassword';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-
+import { motion } from "framer-motion";
 export default function ResetPassword() {
 
     const [showPassword, setShowPassword] = useState(false);
@@ -37,87 +37,89 @@ export default function ResetPassword() {
                 </div>
             </div>
             <div className="login grid place-content-center text-center ">
-                <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
-                <h3 className='text-xl font-heading'>Reset Password</h3>
-                <div>
-                    <Formik
-                        initialValues={{ password: '', confirmPassword: '' }}
-                        validate={values => {
-                            setReseterror('')
-                            setSuccessError('')
-                            const errors: any = {};
-                            if (!values.password) {
-                                errors.password = '*This field is required';
-                            }
-                            if (!values.confirmPassword) {
-                                errors.confirmPassword = '*This field is required'
-                            } else if (values.password !== values.confirmPassword) {
-                                errors.confirmPassword = "*Password doesn't match"
-                            }
-                            return errors;
-                        }}
-                        onSubmit={(values, { setSubmitting }) => {
-                            Reset(
-                                { token: token!, password: values.password, cPassword: values.confirmPassword },
-                                {
-                                    onSuccess: () => {
-                                        setSuccessError('Password reset successfully redirecting to login page ...');
-                                        navigateToLogin();
-                                    },
-                                    onError: () => {
-                                        setReseterror('*Invalid or expired reset token')
-                                        setSubmitting(false)
-                                    },
-                                    onSettled: () => {
-                                        setSubmitting(false)
-                                    }
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+                    <Link to="/" className='logo inline-flex items-center justify-center gap-2'><img className='w-40 rounded-lg shrink-0 object-contain' src={theme === 'dark' ? builderaLogo : builderalight} alt="Buildera logo" /></Link>
+                    <h3 className='text-xl font-heading'>Reset Password</h3>
+                    <div>
+                        <Formik
+                            initialValues={{ password: '', confirmPassword: '' }}
+                            validate={values => {
+                                setReseterror('')
+                                setSuccessError('')
+                                const errors: any = {};
+                                if (!values.password) {
+                                    errors.password = '*This field is required';
                                 }
-                            )
-                        }}
-                    >
-                        {({ isSubmitting }) => (
-                            <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
-                                <div>
-                                    <div className='mb-3'>
-                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
-                                            <Lock size={16} strokeWidth={2} color="gray" />
-                                            <Field id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
-                                            <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
-                                        </div>
-                                        <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
-                                    </div>
+                                if (!values.confirmPassword) {
+                                    errors.confirmPassword = '*This field is required'
+                                } else if (values.password !== values.confirmPassword) {
+                                    errors.confirmPassword = "*Password doesn't match"
+                                }
+                                return errors;
+                            }}
+                            onSubmit={(values, { setSubmitting }) => {
+                                Reset(
+                                    { token: token!, password: values.password, cPassword: values.confirmPassword },
+                                    {
+                                        onSuccess: () => {
+                                            setSuccessError('Password reset successfully redirecting to login page ...');
+                                            navigateToLogin();
+                                        },
+                                        onError: () => {
+                                            setReseterror('*Invalid or expired reset token')
+                                            setSubmitting(false)
+                                        },
+                                        onSettled: () => {
+                                            setSubmitting(false)
+                                        }
+                                    }
+                                )
+                            }}
+                        >
+                            {({ isSubmitting }) => (
+                                <Form className='space-y-4 pt-4 w-7/8 md:w-full grid mx-auto'>
                                     <div>
-                                        <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
-                                            <Lock size={16} strokeWidth={2} color="gray" />
-                                            <Field id="confirmPassword" type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
-                                            <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                        <div className='mb-3'>
+                                            <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                                <Lock size={16} strokeWidth={2} color="gray" />
+                                                <Field id="password" type={showPassword ? "text" : "password"} name="password" placeholder="Password" className="ps-2 bg-transparent outline-none w-full text-white placeholder:text-(--muted-foreground) text-sm" />
+                                                <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                            </div>
+                                            <ErrorMessage name="password" component="div" className='text-start text-(--destructive) text-sm mt-1' />
                                         </div>
-                                        <ErrorMessage name="confirmPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                        <div>
+                                            <div className='flex items-center bg-(--ring-offset) border border-(--border) rounded-md px-3 py-2 sm:py-3 focus-within:border-(--ring) focus-within:shadow-lg transition '>
+                                                <Lock size={16} strokeWidth={2} color="gray" />
+                                                <Field id="confirmPassword" type={showPassword ? "text" : "password"} name="confirmPassword" placeholder="Confirm password" className="ps-2 bg-transparent outline-none w-full  placeholder:text-(--muted-foreground) text-sm" />
+                                                <Eye size={18} strokeWidth={1} className='cursor-pointer' onClick={() => setShowPassword(prev => !prev)} />
+                                            </div>
+                                            <ErrorMessage name="confirmPassword" component="div" className='text-start text-(--destructive) text-sm mt-1' />
+                                        </div>
+                                        {resetError &&
+                                            (<p className='text-sm text-(--destructive) text-start mt-1'>
+                                                {resetError}
+                                            </p>
+                                            )}
+                                        {successError &&
+                                            (<p className='text-sm text-green-400 text-start mt-1'>
+                                                {successError}
+                                            </p>
+                                            )}
                                     </div>
-                                    {resetError &&
-                                        (<p className='text-sm text-(--destructive) text-start mt-1'>
-                                            {resetError}
-                                        </p>
-                                        )}
-                                    {successError &&
-                                        (<p className='text-sm text-green-400 text-start mt-1'>
-                                            {successError}
-                                        </p>
-                                        )}
-                                </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting || isPending}
-                                    className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
-                                >
-                                    {isPending ? 'Reseting your password' : 'Reset Password'}
-                                </button>
-                                <Link to='/login' className='text-sm text-(--primary)'>Back to login</Link>
-                            </Form>
-                        )}
-                    </Formik>
-                </div>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmitting || isPending}
+                                        className='border w-full rounded-md py-2 text-sm text-bold bg-(--ring) hover:bg-(--hover-blue) cursor-pointer transition-all'
+                                    >
+                                        {isPending ? 'Reseting your password' : 'Reset Password'}
+                                    </button>
+                                    <Link to='/login' className='text-sm text-(--primary)'>Back to login</Link>
+                                </Form>
+                            )}
+                        </Formik>
+                    </div>
+                </motion.div>
             </div>
         </div>
     )
