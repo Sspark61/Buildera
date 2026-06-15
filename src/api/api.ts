@@ -19,14 +19,14 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
 
     if (!res.ok) {
         let errorMessage = 'Something went wrong'
-        
+        let errorData: any = null
+
         try {
             // Attempt to parse standard JSON response payload if it exists
-            const errorData = await res.json()
-            errorMessage = errorData.message || JSON.stringify(errorData)
+            const parsedError = await res.json()
+            errorData = parsedError
+            errorMessage = parsedError.message || JSON.stringify(parsedError)
         } catch {
-            // 💡 CRITICAL FIX: If parsing JSON fails because the server sent HTML/Plaintext on a 500 crash, 
-            // read the raw response as text instead so it doesn't break our execution flow.
             try {
                 errorMessage = await res.text()
             } catch {
@@ -37,16 +37,21 @@ export const api = async (endPoint: string, options: RequestInit = {}) => {
         // 2. Scan parsed payload safely for authentication crash signatures
         const lowerMessage = errorMessage.toLowerCase()
         if (
-            res.status === 500 || 
-            lowerMessage.includes('auth') || 
-            lowerMessage.includes('token') || 
+            res.status === 500 ||
+            lowerMessage.includes('auth') ||
+            lowerMessage.includes('token') ||
             lowerMessage.includes('unauthorized') ||
             lowerMessage.includes('jwt')
         ) {
             handleAuthFailure()
         }
 
-        throw new Error(errorMessage)
+        // 💡 CRITICAL FIX: Attach nested data to the error instance so calling functions can read errors/warnings
+        const thrownError = new Error(errorMessage) as any;
+        if (errorData?.data) {
+            thrownError.data = errorData.data;
+        }
+        throw thrownError;
     }
 
     return res.json()
