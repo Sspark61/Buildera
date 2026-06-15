@@ -58,13 +58,13 @@ const Marketplace = () => {
         (priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX ? 1 : 0);
 
     const { data, isLoading, error } = useGetComponents({
-        search,
-        type: selectedCategories[0],
-        minPrice: priceRange[0],
-        maxPrice: priceRange[1],
-        page,
-        limit: 20,
-    });
+    search,
+    type: selectedCategories[0],
+    minPrice: priceRange[0] === PRICE_MIN ? undefined : priceRange[0],
+    maxPrice: priceRange[1] === PRICE_MAX ? undefined : priceRange[1],
+    page,
+    limit: 20,
+});
 
     const products = data?.data.components ?? [];
 
