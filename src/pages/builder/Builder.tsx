@@ -34,9 +34,7 @@ import {
     useDeleteBuild,
 } from "@/hooks/use-builds";
 import { api } from "@/api/api";
-import { motion } from "framer-motion";
 
-import altImage from '@/assets/images/image2.png';
 // ---- Types ----
 interface ApiComponent {
     id: number
@@ -99,7 +97,6 @@ const ComponentBrowser = ({
         search: debouncedSearch || undefined,
         page,
         limit: 10,
-        minPrice: 1,
     })
 
     const components = data?.data.components ?? []
@@ -146,12 +143,9 @@ const ComponentBrowser = ({
                                             }`}
                                     >
                                         <img
-                                            src={c.imageUrl || altImage}
+                                            src={c.imageUrl}
                                             alt={c.name}
                                             loading="lazy"
-                                            onError={(e) => {
-                                                e.currentTarget.src = altImage;
-                                            }}
                                             className="w-14 h-14 rounded-md object-cover bg-muted shrink-0"
                                         />
                                         <div className="flex-1 min-w-0">
@@ -315,6 +309,18 @@ const BuildTips = ({
         }
     })
 
+    // 💡 Added check for components with no price
+    const missingPriceItems = Object.values(selections).filter(
+        (c) => c.price === null || c.price === undefined
+    )
+    
+    if (missingPriceItems.length > 0) {
+        tips.push({
+            type: "warn",
+            text: `Price unavailable for selected item(s): ${missingPriceItems.map(c => c.name).join(', ')}`
+        })
+    }
+
     const missing = componentCategories.filter((c) => !selections[c.key.toLowerCase()])
     if (missing.length > 0 && missing.length < componentCategories.length && compatibilityErrors.length === 0) {
         tips.push({ type: "info", text: `Missing: ${missing.map((m) => m.label).join(", ")}.` })
@@ -367,7 +373,7 @@ const BuildTips = ({
 }
 
 // ---- AI Build Panel ----
-const AIBuildPanel = ({ onApplyBuild: _onApplyBuild }: { onApplyBuild: (b: Record<string, ApiComponent>) => void }) => {
+const AIBuildPanel = ({ onApplyBuild: _onApplyBuild}: {onApplyBuild: (b: Record<string, ApiComponent>) => void}) => {
     const [needs, setNeeds] = useState("")
     const [budget, setBudget] = useState("")
 
@@ -459,12 +465,12 @@ const syncBuildSelections = async (
 const Builder = () => {
     const [searchParams] = useSearchParams()
     const existingBuildId = searchParams.get('buildId')
-
+    
     // Extract preselect parameters
     const preselectId = searchParams.get('preselectId')
     const preselectType = searchParams.get('preselectType')
     const preselectName = searchParams.get('preselectName')
-
+    
     const queryClient = useQueryClient()
 
     useEffect(() => {
@@ -503,7 +509,7 @@ const Builder = () => {
         if (preselectId && preselectType) {
             const decodedType = decodeURIComponent(preselectType);
             const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === decodedType)?.[0];
-
+            
             if (catKey) {
                 handleSelect({
                     id: Number(preselectId),
@@ -566,7 +572,7 @@ const Builder = () => {
                 method: 'PUT',
                 body: JSON.stringify(payload),
             })
-                .then(() => { })
+                .then(() => {})
                 .catch((err) => {
                     console.error("Failed to auto-save build details:", err);
                 })
@@ -642,24 +648,27 @@ const Builder = () => {
         } catch (err: any) {
             console.error("Caught rich validation error:", err);
 
-            if (err.data?.errors?.length) {
-                setCompatibilityErrors(err.data.errors)
-            } else if (err.data?.warnings?.length) {
-                setCompatibilityErrors(err.data.warnings)
+            // 💡 Read the errors array attached from the API client
+            const detailedErrors = err?.data?.errors;
+            const detailedWarnings = err?.data?.warnings;
+
+            if (detailedErrors && detailedErrors.length > 0) {
+                setCompatibilityErrors(detailedErrors);
+            } else if (detailedWarnings && detailedWarnings.length > 0) {
+                setCompatibilityErrors(detailedWarnings);
             } else {
                 setCompatibilityErrors([{
                     severity: 'error',
                     rule: 'INCOMPATIBILITY',
                     components: [],
                     message: err.message || 'Incompatible component configuration.'
-                }])
+                }]);
             }
 
             if (currentBuildId && existing) {
                 try {
-                    await api(`/builds/${currentBuildId}/components`, {
-                        method: 'POST',
-                        body: JSON.stringify({ componentId: existing.id }),
+                    await api(`/builds/${currentBuildId}/components/${existing.id}`, {
+                        method: 'POST', // or DELETE depending on how restore works, keeping your existing implementation
                     })
                 } catch {
                     console.error('Failed to restore old component')
@@ -731,237 +740,230 @@ const Builder = () => {
 
     return (
         <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground pb-16 md:pb-0">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <header className="p-4 lg:p-6 border-b border-border shrink-0 bg-background/95 backdrop-blur">
-                    <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0 space-y-2">
+            <header className="p-4 lg:p-6 border-b border-border shrink-0 bg-background/95 backdrop-blur">
+                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0 space-y-2">
+                        <Input
+                            value={buildName}
+                            onChange={(e) => { setBuildName(e.target.value) }}
+                            className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md"
+                        />
+                        <div className="flex gap-2 flex-wrap">
                             <Input
-                                value={buildName}
-                                onChange={(e) => { setBuildName(e.target.value) }}
-                                className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md"
+                                placeholder="Purpose (e.g. Gaming)"
+                                value={buildPurpose}
+                                onChange={(e) => { setBuildPurpose(e.target.value) }}
+                                className="text-xs bg-muted/30 border-border h-7 w-40"
                             />
-                            <div className="flex gap-2 flex-wrap">
-                                <Input
-                                    placeholder="Purpose (e.g. Gaming)"
-                                    value={buildPurpose}
-                                    onChange={(e) => { setBuildPurpose(e.target.value) }}
-                                    className="text-xs bg-muted/30 border-border h-7 w-40"
-                                />
-                                <Input
-                                    type="number"
-                                    placeholder="Budget ($)"
-                                    value={budget}
-                                    onChange={(e) => { setBudget(e.target.value) }}
-                                    className="text-xs bg-muted/30 border-border h-7 w-32"
-                                />
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                                {Object.keys(selections).length}/{componentCategories.length} components · ${totalPrice.toLocaleString()} total
-                            </p>
+                            <Input
+                                type="number"
+                                placeholder="Budget ($)"
+                                value={budget}
+                                onChange={(e) => { setBudget(e.target.value) }}
+                                className="text-xs bg-muted/30 border-border h-7 w-32"
+                            />
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                            {Object.keys(selections).length}/{componentCategories.length} components · ${totalPrice.toLocaleString()} total
+                        </p>
+                    </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs font-medium transition-all mr-2">
-                                {isSaving ? (
-                                    <span className="flex items-center gap-1.5 animate-pulse text-primary">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
-                                        Saving...
-                                    </span>
-                                ) : activeBuildId ? (
-                                    <span className="text-muted-foreground/70">All changes saved ✓</span>
-                                ) : (
-                                    <span className="text-muted-foreground/50 italic">Unsaved build</span>
-                                )}
-                            </span>
-
-                            <Button variant="outline" size="sm" onClick={handleNewBuild} className="border-border text-muted-foreground gap-1.5">
-                                <FileDown className="w-3.5 h-3.5" /> New
-                            </Button>
-                            {activeBuildId && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowDeleteDialog(true)}
-                                    className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                                </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-medium transition-all mr-2">
+                            {isSaving ? (
+                                <span className="flex items-center gap-1.5 animate-pulse text-primary">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping" />
+                                    Saving...
+                                </span>
+                            ) : activeBuildId ? (
+                                <span className="text-muted-foreground/70">All changes saved ✓</span>
+                            ) : (
+                                <span className="text-muted-foreground/50 italic">Unsaved build</span>
                             )}
-                        </div>
-                    </div>
-                </header>
+                        </span>
 
-                <main className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 bg-background">
-                    <div className="max-w-7xl mx-auto">
-                        <Tabs defaultValue="components" className="space-y-6">
-                            <TabsList className="bg-muted/50 border border-border">
-                                <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                                    <Box className="w-3.5 h-3.5" /> Components
-                                </TabsTrigger>
-                                <TabsTrigger value="ai" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                                    <Sparkles className="w-3.5 h-3.5" /> AI Build
-                                </TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="components">
-                                <div className="grid lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 space-y-3">
-                                        <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-                                                    <Wand2 className="w-4 h-4 text-primary-foreground" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
-                                                    <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
-                                                </div>
-                                            </div>
-                                            <Button size="sm" disabled className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0 opacity-60">
-                                                <Wand2 className="w-3.5 h-3.5" /> Coming soon
-                                            </Button>
-                                        </Card>
-
-                                        {componentCategories.map((cat, i) => {
-                                            const categoryKey = cat.key.toLowerCase();
-                                            const selected = selections[categoryKey];
-                                            const Icon = iconMap[categoryKey] || Box;
-
-                                            return (
-                                                <motion.div key={cat.key} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                                                    <Card
-                                                        key={cat.key}
-                                                        className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
-                                                            }`}
-                                                    >
-                                                        <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
-                                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
-                                                                }`}>
-                                                                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                                                            </div>
-
-                                                            <div className="min-w-0 w-full overflow-hidden">
-                                                                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
-                                                                    {cat.label}
-                                                                </p>
-                                                                {selected ? (
-                                                                    <div className="flex items-center gap-2 min-w-0 mt-0.5">
-                                                                        <img
-                                                                            src={selected.imageUrl || altImage}
-                                                                            alt={selected.name}
-                                                                            onError={(e) => {
-                                                                                e.currentTarget.src = altImage;
-                                                                            }}
-                                                                            className="w-5 h-5 rounded object-cover bg-muted shrink-0"
-                                                                        />
-                                                                        <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
-                                                                            {selected.name}
-                                                                        </h4>
-                                                                    </div>
-                                                                ) : (
-                                                                    <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
-                                                                        Not selected
-                                                                    </p>
-                                                                )}
-                                                            </div>
-
-                                                            {selected && (
-                                                                <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
-                                                                    {selected.price ? `$${selected.price}` : 'N/A'}
-                                                                </span>
-                                                            )}
-
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                {selected && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => removeSelection(categoryKey)}
-                                                                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive shrink-0"
-                                                                        disabled={isAddingComponent}
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                                                                    </Button>
-                                                                )}
-                                                                <Button
-                                                                    variant={selected ? "outline" : "default"}
-                                                                    size="sm"
-                                                                    onClick={() => openBrowser({ ...cat, key: categoryKey })}
-                                                                    disabled={isAddingComponent}
-                                                                    className={selected
-                                                                        ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3 shrink-0"
-                                                                        : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
-                                                                    }
-                                                                >
-                                                                    {selected ? "Change" : (<><Plus className="w-3 h-3" /> Select</>)}
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    </Card>
-                                                </motion.div>
-                                            )
-                                        })}
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <BuildSummary selections={selections} />
-                                        <BuildTips
-                                            selections={selections}
-                                            compatibilityErrors={compatibilityErrors}
-                                        />
-                                    </div>
-                                </div>
-                            </TabsContent>
-
-                            <TabsContent value="ai">
-                                <div className="grid lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2">
-                                        <AIBuildPanel onApplyBuild={setSelections} />
-                                    </div>
-                                    <div className="space-y-4">
-                                        <BuildSummary selections={selections} />
-                                        <BuildTips
-                                            selections={selections}
-                                            compatibilityErrors={compatibilityErrors}
-                                        />
-                                    </div>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
-                </main>
-
-                {activeCategory && (
-                    <ComponentBrowser
-                        open={browserOpen}
-                        onOpenChange={setBrowserOpen}
-                        category={activeCategory}
-                        selectedId={selections[activeCategory.key]?.id}
-                        onSelect={handleSelect}
-                    />
-                )}
-
-                <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete this build?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This will permanently delete "{buildName}" and all its components. This cannot be undone.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={handleDelete}
-                                disabled={isDeleting}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        <Button variant="outline" size="sm" onClick={handleNewBuild} className="border-border text-muted-foreground gap-1.5">
+                            <FileDown className="w-3.5 h-3.5" /> New
+                        </Button>
+                        {activeBuildId && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowDeleteDialog(true)}
+                                className="border-destructive/40 text-destructive hover:bg-destructive/10 gap-1.5"
                             >
-                                {isDeleting ? 'Deleting...' : 'Delete build'}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                                <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </header>
 
-            </motion.div></div>
+            <main className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 bg-background">
+                <div className="max-w-7xl mx-auto">
+                    <Tabs defaultValue="components" className="space-y-6">
+                        <TabsList className="bg-muted/50 border border-border">
+                            <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
+                                <Box className="w-3.5 h-3.5" /> Components
+                            </TabsTrigger>
+                            <TabsTrigger value="ai" className="gap-1.5 text-xs data-[state=active]:bg-card">
+                                <Sparkles className="w-3.5 h-3.5" /> AI Build
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="components">
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 space-y-3">
+                                    <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+                                                <Wand2 className="w-4 h-4 text-primary-foreground" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
+                                                <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
+                                            </div>
+                                        </div>
+                                        <Button size="sm" disabled className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0 opacity-60">
+                                            <Wand2 className="w-3.5 h-3.5" /> Coming soon
+                                        </Button>
+                                    </Card>
+
+                                    {componentCategories.map((cat) => {
+                                        const categoryKey = cat.key.toLowerCase();
+                                        const selected = selections[categoryKey];
+                                        const Icon = iconMap[categoryKey] || Box;
+
+                                        return (
+                                            <Card
+                                                key={cat.key}
+                                                className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
+                                                    }`}
+                                            >
+                                                <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
+                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
+                                                        }`}>
+                                                        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                                    </div>
+
+                                                    <div className="min-w-0 w-full overflow-hidden">
+                                                        <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
+                                                            {cat.label}
+                                                        </p>
+                                                        {selected ? (
+                                                            <div className="flex items-center gap-2 min-w-0 mt-0.5">
+                                                                <img
+                                                                    src={selected.imageUrl}
+                                                                    alt={selected.name}
+                                                                    className="w-5 h-5 rounded object-cover bg-muted shrink-0"
+                                                                />
+                                                                <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
+                                                                    {selected.name}
+                                                                </h4>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
+                                                                Not selected
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {selected && (
+                                                        <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
+                                                            {selected.price ? `$${selected.price}` : 'N/A'}
+                                                        </span>
+                                                    )}
+
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        {selected && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => removeSelection(categoryKey)}
+                                                                className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                                                disabled={isAddingComponent}
+                                                            >
+                                                                <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant={selected ? "outline" : "default"}
+                                                            size="sm"
+                                                            onClick={() => openBrowser({ ...cat, key: categoryKey })}
+                                                            disabled={isAddingComponent}
+                                                            className={selected
+                                                                ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3 shrink-0"
+                                                                : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
+                                                            }
+                                                        >
+                                                            {selected ? "Change" : (<><Plus className="w-3 h-3" /> Select</>)}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        )
+                                    })}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <BuildSummary selections={selections} />
+                                    <BuildTips
+                                        selections={selections}
+                                        compatibilityErrors={compatibilityErrors}
+                                    />
+                                </div>
+                            </div>
+                        </TabsContent>
+
+                        <TabsContent value="ai">
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2">
+                                    <AIBuildPanel onApplyBuild={setSelections} />
+                                </div>
+                                <div className="space-y-4">
+                                    <BuildSummary selections={selections} />
+                                    <BuildTips
+                                        selections={selections}
+                                        compatibilityErrors={compatibilityErrors}
+                                    />
+                                </div>
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </main>
+
+            {activeCategory && (
+                <ComponentBrowser
+                    open={browserOpen}
+                    onOpenChange={setBrowserOpen}
+                    category={activeCategory}
+                    selectedId={selections[activeCategory.key]?.id}
+                    onSelect={handleSelect}
+                />
+            )}
+
+            <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this build?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete "{buildName}" and all its components. This cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete build'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     )
 }
 
