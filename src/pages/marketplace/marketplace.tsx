@@ -13,6 +13,13 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
@@ -40,6 +47,7 @@ const Marketplace = () => {
     const [page, setPage] = useState(1);
     const [view, setView] = useState<ViewMode>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [sort, setSort] = useState<string>("none");
 
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
@@ -58,13 +66,15 @@ const Marketplace = () => {
         (priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX ? 1 : 0);
 
     const { data, isLoading, error } = useGetComponents({
-    search,
-    type: selectedCategories[0],
-    minPrice: priceRange[0] === PRICE_MIN ? undefined : priceRange[0],
-    maxPrice: priceRange[1] === PRICE_MAX ? undefined : priceRange[1],
-    page,
-    limit: 20,
-});
+        search,
+        type: selectedCategories[0],
+        minPrice: priceRange[0] === PRICE_MIN ? undefined : priceRange[0],
+        maxPrice: priceRange[1] === PRICE_MAX ? undefined : priceRange[1],
+        page,
+        limit: 20,
+        sortBy: sort !== "none" ? "price" : undefined,
+        order: sort === "price-asc" ? "asc" : sort === "price-desc" ? "desc" : undefined,
+    });
 
     const products = data?.data.components ?? [];
 
@@ -154,6 +164,22 @@ const Marketplace = () => {
                                             value={priceRange}
                                             onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
                                         />
+                                    </div>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                            Sort by
+                                        </Label>
+                                        <Select value={sort} onValueChange={setSort}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select order" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">Default</SelectItem>
+                                                <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                                                <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <Separator />
                                     <div className="space-y-2">
