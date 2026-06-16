@@ -746,7 +746,7 @@ const Builder = () => {
                         <Input
                             value={buildName}
                             onChange={(e) => { setBuildName(e.target.value) }}
-                            className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md"
+                            className="text-xl lg:text-2xl font-heading font-bold text-foreground bg-transparent border-none p-0 h-auto focus-visible:ring-0 max-w-md pl-3"
                         />
                         <div className="flex gap-2 flex-wrap">
                             <Input
