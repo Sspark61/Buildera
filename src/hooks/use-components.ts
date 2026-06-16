@@ -8,6 +8,8 @@ interface ComponentsParams {
     search?: string
     page?: number
     limit?: number
+    sortBy?: string
+    order?: 'asc' | 'desc'
 }
 
 interface Component {
@@ -39,6 +41,8 @@ export const useGetComponents = (params: ComponentsParams = {}) => {
     if (params.search)      query.set('search', params.search)
     if (params.page)        query.set('page', String(params.page))
     if (params.limit)       query.set('limit', String(params.limit))
+    if (params.sortBy)      query.set('sortBy', params.sortBy)
+    if (params.order)       query.set('order', params.order)
 
     return useQuery({
         queryKey: ['components', params],
