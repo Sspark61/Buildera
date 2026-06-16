@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from "sonner";
 import {
     Monitor, Cpu, CircuitBoard, MemoryStick, HardDrive, Zap, Fan, Box,
     Plus, FileDown, Sparkles, Trash2, Search, Check, Receipt,
@@ -8,10 +9,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
@@ -33,6 +31,8 @@ import {
     useCreateBuild,
     useDeleteBuild,
 } from "@/hooks/use-builds";
+import { useGenerateAIBuild, type AIBuildRequest, type AIBuildResponse } from "@/hooks/use-autobuild";
+import { AIBuildModal } from "@/components/ai-build-modal";
 import { api } from "@/api/api";
 
 // ---- Types ----
@@ -45,6 +45,10 @@ interface ApiComponent {
     imageUrl: string
     buildComponentId?: number
 }
+
+type SelectionValue = ApiComponent | ApiComponent[] | null
+
+type Selections = Record<string, SelectionValue>
 
 interface CompatibilityError {
     severity: string
@@ -65,9 +69,71 @@ const categoryTypeMap: Record<string, string> = {
     case: 'Case',
 }
 
+// Maps the AI model's response keys to our internal category keys
+const aiKeyToCategoryKey: Record<string, string> = {
+    psu: 'psu',
+    cpu: 'cpu',
+    storage: 'storage',
+    cooler: 'cooling',
+    gpu: 'gpu',
+    case: 'case',
+    mobo: 'motherboard',
+    memory: 'ram',
+}
+
 const iconMap: Record<string, React.ElementType> = {
     gpu: Monitor, cpu: Cpu, motherboard: CircuitBoard, ram: MemoryStick,
     storage: HardDrive, psu: Zap, cooling: Fan, case: Box,
+}
+
+const emptySelections = (): Selections => ({
+    ram: [], storage: [], cpu: null, gpu: null, motherboard: null, psu: null, cooling: null, case: null,
+})
+
+const isMultiSlot = (categoryKey: string) => categoryKey === 'ram' || categoryKey === 'storage'
+
+const getItems = (selections: Selections, categoryKey: string): ApiComponent[] => {
+    const value = selections[categoryKey]
+    if (!value) return []
+    return Array.isArray(value) ? value : [value]
+}
+
+const getTotalPrice = (selections: Selections) =>
+    componentCategories.reduce(
+        (sum, cat) => sum + getItems(selections, cat.key).reduce((s, c) => s + (c.price ?? 0), 0),
+        0
+    )
+
+const getFilledCategoryCount = (selections: Selections) =>
+    componentCategories.filter((cat) => getItems(selections, cat.key).length > 0).length
+
+const getCompletion = (selections: Selections) =>
+    Math.round((getFilledCategoryCount(selections) / componentCategories.length) * 100)
+
+const getItemCount = (selections: Selections) =>
+    componentCategories.reduce((sum, cat) => sum + getItems(selections, cat.key).length, 0)
+
+const buildSelectionsFromComponents = (components: any[]): Selections => {
+    const mapped = emptySelections()
+    components.forEach((c: any) => {
+        const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === c.type)?.[0]
+        if (!catKey) return
+        const comp: ApiComponent = {
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            brand: c.brand,
+            price: c.price,
+            imageUrl: c.imageUrl,
+            buildComponentId: c.buildComponentId,
+        }
+        if (isMultiSlot(catKey)) {
+            ;(mapped[catKey] as ApiComponent[]).push(comp)
+        } else {
+            mapped[catKey] = comp
+        }
+    })
+    return mapped
 }
 
 // ---- ComponentBrowser ----
@@ -243,11 +309,24 @@ const InlineSpecsFetcher = ({
 const BuildSummary = ({
     selections,
 }: {
-    selections: Record<string, ApiComponent>
+    selections: Selections
 }) => {
-    const items = Object.entries(selections)
-    const total = items.reduce((s, [, c]) => s + (c.price ?? 0), 0)
-    const completion = Math.round((items.length / componentCategories.length) * 100)
+    const rows: { key: string; label: string; price: number }[] = []
+    componentCategories.forEach((cat) => {
+        const items = getItems(selections, cat.key)
+        if (items.length === 0) return
+        if (isMultiSlot(cat.key)) {
+            rows.push({
+                key: cat.key,
+                label: `${cat.label}: ${items.length} module${items.length > 1 ? 's' : ''}`,
+                price: items.reduce((s, c) => s + (c.price ?? 0), 0),
+            })
+        } else {
+            rows.push({ key: cat.key, label: items[0].name, price: items[0].price ?? 0 })
+        }
+    })
+    const total = getTotalPrice(selections)
+    const completion = getCompletion(selections)
 
     return (
         <Card className="p-4 bg-card border-border">
@@ -267,13 +346,13 @@ const BuildSummary = ({
                 </div>
             </div>
             <div className="space-y-1.5 mb-3 max-h-48 overflow-y-auto">
-                {items.length === 0 ? (
+                {rows.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic">No components selected yet.</p>
-                ) : items.map(([key, c]) => (
-                    <div key={key} className="flex justify-between text-xs">
-                        <span className="text-muted-foreground truncate pr-2">{c.name}</span>
+                ) : rows.map((row) => (
+                    <div key={row.key} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground truncate pr-2">{row.label}</span>
                         <span className="text-foreground font-medium shrink-0">
-                            {c.price ? `$${c.price}` : 'N/A'}
+                            {row.price ? `$${row.price}` : 'N/A'}
                         </span>
                     </div>
                 ))}
@@ -290,7 +369,7 @@ const BuildSummary = ({
 const BuildTips = ({
     selections, compatibilityErrors,
 }: {
-    selections: Record<string, ApiComponent>
+    selections: Selections
     compatibilityErrors: CompatibilityError[]
 }) => {
     const tips: { type: "warn" | "ok" | "info" | "fix"; text: string }[] = []
@@ -310,10 +389,11 @@ const BuildTips = ({
     })
 
     // 💡 Added check for components with no price
-    const missingPriceItems = Object.values(selections).filter(
+    const allItems = componentCategories.flatMap((cat) => getItems(selections, cat.key))
+    const missingPriceItems = allItems.filter(
         (c) => c.price === null || c.price === undefined
     )
-    
+
     if (missingPriceItems.length > 0) {
         tips.push({
             type: "warn",
@@ -321,7 +401,7 @@ const BuildTips = ({
         })
     }
 
-    const missing = componentCategories.filter((c) => !selections[c.key.toLowerCase()])
+    const missing = componentCategories.filter((c) => getItems(selections, c.key).length === 0)
     if (missing.length > 0 && missing.length < componentCategories.length && compatibilityErrors.length === 0) {
         tips.push({ type: "info", text: `Missing: ${missing.map((m) => m.label).join(", ")}.` })
     }
@@ -372,93 +452,13 @@ const BuildTips = ({
     )
 }
 
-// ---- AI Build Panel ----
-const AIBuildPanel = ({ onApplyBuild: _onApplyBuild}: {onApplyBuild: (b: Record<string, ApiComponent>) => void}) => {
-    const [needs, setNeeds] = useState("")
-    const [budget, setBudget] = useState("")
-
-    const examples = [
-        "1440p gaming and streaming on Twitch",
-        "Video editing in Premiere Pro and 3D rendering",
-        "Office work, web browsing, light productivity",
-        "4K AAA gaming with ray tracing maxed out",
-    ]
-
-    return (
-        <Card className="p-5 bg-card border-border">
-            <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <div>
-                    <h3 className="text-sm font-heading font-semibold text-foreground">AI Build Generator</h3>
-                    <p className="text-xs text-muted-foreground">Describe your needs — we'll assemble a balanced build.</p>
-                </div>
-            </div>
-            <div className="space-y-4">
-                <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">What will you use the PC for?</Label>
-                    <Textarea
-                        placeholder="e.g. 1440p gaming, video editing, AI workloads..."
-                        value={needs}
-                        onChange={(e) => setNeeds(e.target.value)}
-                        maxLength={500}
-                        className="min-h-[100px] bg-muted/30 border-border text-sm resize-none"
-                    />
-                    <p className="text-[10px] text-muted-foreground text-right">{needs.length}/500</p>
-                </div>
-                <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Budget (USD, optional)</Label>
-                    <Input
-                        type="number"
-                        placeholder="e.g. 1500"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        className="bg-muted/30 border-border text-sm"
-                    />
-                </div>
-                <div>
-                    <p className="text-[11px] text-muted-foreground mb-1.5">Try an example:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                        {examples.map((ex) => (
-                            <button key={ex} type="button" onClick={() => setNeeds(ex)}
-                                className="text-[11px] px-2 py-1 rounded-md border border-border bg-muted/30 hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors">
-                                {ex}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <Button disabled className="w-full gradient-primary text-primary-foreground gap-1.5 opacity-60">
-                    <Sparkles className="w-4 h-4" /> Coming soon
-                </Button>
-            </div>
-        </Card>
-    )
-}
-
 const syncBuildSelections = async (
     buildId: number,
-    setSelections: React.Dispatch<React.SetStateAction<Record<string, ApiComponent>>>
+    setSelections: React.Dispatch<React.SetStateAction<Selections>>
 ) => {
     const updated: any = await api(`/builds/${buildId}`)
     if (!updated?.data?.components) return
-
-    const mapped: Record<string, ApiComponent> = {}
-    updated.data.components.forEach((c: any) => {
-        const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === c.type)?.[0]
-        if (catKey) {
-            mapped[catKey] = {
-                id: c.id,
-                name: c.name,
-                type: c.type,
-                brand: c.brand,
-                price: c.price,
-                imageUrl: c.imageUrl,
-                buildComponentId: c.buildComponentId,
-            }
-        }
-    })
-    setSelections(mapped)
+    setSelections(buildSelectionsFromComponents(updated.data.components))
 }
 
 // ---- Main Builder Component ----
@@ -487,7 +487,7 @@ const Builder = () => {
         setSeeded(false)
     }, [existingBuildId])
 
-    const [selections, setSelections] = useState<Record<string, ApiComponent>>({})
+    const [selections, setSelections] = useState<Selections>(emptySelections())
     const [browserOpen, setBrowserOpen] = useState(false)
     const [activeCategory, setActiveCategory] = useState<ComponentCategory | null>(null)
     const [buildName, setBuildName] = useState("My Custom Build")
@@ -499,10 +499,12 @@ const Builder = () => {
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [showAIBuildModal, setShowAIBuildModal] = useState(false)
     const navigate = useNavigate()
 
     const { mutate: createBuild, isPending: isCreating } = useCreateBuild()
     const { mutate: deleteBuild, isPending: isDeleting } = useDeleteBuild()
+    const { mutate: generateAIBuild, isPending: isAILoading } = useGenerateAIBuild()
 
     // Automatically trigger pre-selection from ProductDetail
     useEffect(() => {
@@ -532,22 +534,7 @@ const Builder = () => {
         setActiveBuildId(b.id)
 
         if (b.components?.length) {
-            const mapped: Record<string, ApiComponent> = {}
-            b.components.forEach((c: any) => {
-                const catKey = Object.entries(categoryTypeMap).find(([, v]) => v === c.type)?.[0]
-                if (catKey) {
-                    mapped[catKey] = {
-                        id: c.id,
-                        name: c.name,
-                        type: c.type,
-                        brand: c.brand,
-                        price: c.price,
-                        imageUrl: c.imageUrl,
-                        buildComponentId: c.buildComponentId,
-                    }
-                }
-            })
-            setSelections(mapped)
+            setSelections(buildSelectionsFromComponents(b.components))
         }
         setSeeded(true)
     }, [existingBuildData, existingBuildId, seeded])
@@ -593,11 +580,13 @@ const Builder = () => {
         const targetKey = forcedCategoryKey || activeCategory?.key;
         if (!targetKey) return
 
+        const multi = isMultiSlot(targetKey)
+
         setIsAddingComponent(true)
         setCompatibilityErrors([])
 
         let currentBuildId = activeBuildId;
-        const existing = selections[targetKey]
+        const existing = multi ? null : (selections[targetKey] as ApiComponent | null)
 
         try {
             // Step 1: Initialize new build record on backend if it doesn't exist yet
@@ -683,8 +672,11 @@ const Builder = () => {
         }
     }
 
-    const removeSelection = async (key: string) => {
-        const component = selections[key]
+    const removeSelection = async (key: string, componentId?: number) => {
+        const multi = isMultiSlot(key)
+        const component = multi
+            ? getItems(selections, key).find((c) => c.id === componentId)
+            : (selections[key] as ApiComponent | null)
 
         if (activeBuildId && component) {
             setIsAddingComponent(true)
@@ -701,7 +693,11 @@ const Builder = () => {
         } else {
             setSelections(prev => {
                 const next = { ...prev }
-                delete next[key]
+                if (multi) {
+                    next[key] = getItems(prev, key).filter((c) => c.id !== componentId)
+                } else {
+                    next[key] = null
+                }
                 return next
             })
         }
@@ -710,7 +706,7 @@ const Builder = () => {
     }
 
     const handleNewBuild = () => {
-        setSelections({})
+        setSelections(emptySelections())
         setBuildName("My Custom Build")
         setBuildPurpose("Gaming")
         setBudget("")
@@ -727,7 +723,121 @@ const Builder = () => {
         })
     }
 
-    const totalPrice = Object.values(selections).reduce((sum, c) => sum + (c.price ?? 0), 0)
+    const handleGenerateAIBuild = async (form: { prompt: string; budget: number | null; allowUpgrade: boolean }) => {
+        const lockedInBuild: Record<string, number | number[]> = {}
+        componentCategories.forEach((cat) => {
+            const items = getItems(selections, cat.key)
+            if (items.length === 0) return
+            lockedInBuild[cat.key] = isMultiSlot(cat.key) ? items.map((c) => c.id) : items[0].id
+        })
+
+        const request: AIBuildRequest = {
+            prompt: form.prompt,
+            budget: form.budget,
+            locked_in_build: lockedInBuild,
+            allow_upgrade: form.allowUpgrade,
+        }
+
+        generateAIBuild(request, {
+            onSuccess: async (response) => {
+                await applyAIBuildResponse(response, form.allowUpgrade)
+            },
+            onError: (err: any) => {
+                toast.error(err?.message || "Failed to generate AI build")
+            },
+        })
+    }
+
+    const applyAIBuildResponse = async (response: AIBuildResponse, allowUpgrade: boolean) => {
+        try {
+            const fetchedByCategory: Record<string, ApiComponent[]> = {}
+
+            for (const [aiKey, ids] of Object.entries(response.build_ids)) {
+                const catKey = aiKeyToCategoryKey[aiKey]
+                if (!catKey) continue
+
+                const idList = Array.isArray(ids) ? ids : [ids]
+                const components = await Promise.all(
+                    idList.map(async (id) => {
+                        const res: any = await api(`/components/${id}`)
+                        const c = res.data
+                        return {
+                            id: c.id,
+                            name: c.name,
+                            type: c.type,
+                            brand: c.brand,
+                            price: c.price,
+                            imageUrl: c.imageUrl,
+                        } as ApiComponent
+                    })
+                )
+                fetchedByCategory[catKey] = components
+            }
+
+            let currentBuildId = activeBuildId
+
+            if (!currentBuildId) {
+                const buildPayload: Record<string, any> = { name: buildName, purpose: buildPurpose }
+                if (budget.trim() !== "") buildPayload.budget = Number(budget)
+                const newBuildResponse: any = await new Promise((resolve, reject) => {
+                    createBuild(buildPayload as any, {
+                        onSuccess: (data) => resolve(data),
+                        onError: (err) => reject(err),
+                    })
+                })
+                currentBuildId = newBuildResponse.data.id
+                setActiveBuildId(currentBuildId)
+            }
+
+            for (const cat of componentCategories) {
+                const fetched = fetchedByCategory[cat.key]
+                if (!fetched) continue
+
+                const existingItems = getItems(selections, cat.key)
+
+                if (isMultiSlot(cat.key)) {
+                    if (allowUpgrade) {
+                        for (const item of existingItems) {
+                            await api(`/builds/${currentBuildId}/components/${item.id}`, { method: 'DELETE' }).catch(() => {})
+                        }
+                        for (const item of fetched) {
+                            await api(`/builds/${currentBuildId}/components`, {
+                                method: 'POST',
+                                body: JSON.stringify({ componentId: item.id }),
+                            })
+                        }
+                    } else if (existingItems.length === 0) {
+                        for (const item of fetched) {
+                            await api(`/builds/${currentBuildId}/components`, {
+                                method: 'POST',
+                                body: JSON.stringify({ componentId: item.id }),
+                            })
+                        }
+                    }
+                } else {
+                    if (allowUpgrade || existingItems.length === 0) {
+                        if (existingItems.length > 0) {
+                            await api(`/builds/${currentBuildId}/components/${existingItems[0].id}`, { method: 'DELETE' }).catch(() => {})
+                        }
+                        await api(`/builds/${currentBuildId}/components`, {
+                            method: 'POST',
+                            body: JSON.stringify({ componentId: fetched[0].id }),
+                        })
+                    }
+                }
+            }
+
+            await syncBuildSelections(currentBuildId!, setSelections)
+            setCompatibilityErrors([])
+            toast.success(response.model_message || "AI build applied")
+            setShowAIBuildModal(false)
+        } catch (err: any) {
+            console.error("Failed to apply AI build:", err)
+            toast.error(err?.message || "Failed to apply AI-generated build")
+        }
+    }
+
+    const totalPrice = getTotalPrice(selections)
     const isSaving = isCreating || isAddingComponent || isLocalSaving
 
     if (existingBuildId && isBuildLoading) {
@@ -764,7 +874,7 @@ const Builder = () => {
                             />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            {Object.keys(selections).length}/{componentCategories.length} components · ${totalPrice.toLocaleString()} total
+                            {getFilledCategoryCount(selections)}/{componentCategories.length} categories · {getItemCount(selections)} components · ${totalPrice.toLocaleString()} total
                         </p>
                     </div>
 
@@ -800,145 +910,218 @@ const Builder = () => {
             </header>
 
             <main className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 bg-background">
-                <div className="max-w-7xl mx-auto">
-                    <Tabs defaultValue="components" className="space-y-6">
-                        <TabsList className="bg-muted/50 border border-border">
-                            <TabsTrigger value="components" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                                <Box className="w-3.5 h-3.5" /> Components
-                            </TabsTrigger>
-                            <TabsTrigger value="ai" className="gap-1.5 text-xs data-[state=active]:bg-card">
-                                <Sparkles className="w-3.5 h-3.5" /> AI Build
-                            </TabsTrigger>
-                        </TabsList>
+                <div className="max-w-7xl mx-auto space-y-6">
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-3">
+                            <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+                                        <Wand2 className="w-4 h-4 text-primary-foreground" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
+                                        <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
+                                    </div>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={() => setShowAIBuildModal(true)}
+                                    className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5" /> Generate with AI
+                                </Button>
+                            </Card>
 
-                        <TabsContent value="components">
-                            <div className="grid lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2 space-y-3">
-                                    <Card className="p-4 bg-gradient-to-r from-secondary/15 via-primary/10 to-secondary/15 border-secondary/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-                                                <Wand2 className="w-4 h-4 text-primary-foreground" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-heading font-semibold text-foreground">Let AI complete your build</h4>
-                                                <p className="text-xs text-muted-foreground">Pick the parts you care about — AI fills in the rest.</p>
-                                            </div>
-                                        </div>
-                                        <Button size="sm" disabled className="gradient-primary text-primary-foreground gap-1.5 h-9 text-xs shrink-0 opacity-60">
-                                            <Wand2 className="w-3.5 h-3.5" /> Coming soon
-                                        </Button>
-                                    </Card>
+                            {componentCategories.map((cat) => {
+                                const categoryKey = cat.key.toLowerCase();
+                                const multi = isMultiSlot(categoryKey)
+                                const items = getItems(selections, categoryKey)
+                                const Icon = iconMap[categoryKey] || Box;
 
-                                    {componentCategories.map((cat) => {
-                                        const categoryKey = cat.key.toLowerCase();
-                                        const selected = selections[categoryKey];
-                                        const Icon = iconMap[categoryKey] || Box;
-
-                                        return (
-                                            <Card
-                                                key={cat.key}
-                                                className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
-                                                    }`}
-                                            >
-                                                <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
-                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
-                                                        }`}>
-                                                        <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                if (multi) {
+                                    return (
+                                        <Card
+                                            key={cat.key}
+                                            className={`p-3 sm:p-4 border transition-all overflow-hidden space-y-2.5 ${items.length > 0 ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
+                                                }`}
+                                        >
+                                            {items.length === 0 ? (
+                                                <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-3 w-full">
+                                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 bg-muted/50">
+                                                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                                                     </div>
-
                                                     <div className="min-w-0 w-full overflow-hidden">
                                                         <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
                                                             {cat.label}
                                                         </p>
-                                                        {selected ? (
-                                                            <div className="flex items-center gap-2 min-w-0 mt-0.5">
-                                                                <img
-                                                                    src={selected.imageUrl}
-                                                                    alt={selected.name}
-                                                                    className="w-5 h-5 rounded object-cover bg-muted shrink-0"
-                                                                />
-                                                                <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
-                                                                    {selected.name}
-                                                                </h4>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
-                                                                Not selected
-                                                            </p>
-                                                        )}
+                                                        <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
+                                                            Not selected
+                                                        </p>
                                                     </div>
-
-                                                    {selected && (
-                                                        <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
-                                                            {selected.price ? `$${selected.price}` : 'N/A'}
-                                                        </span>
-                                                    )}
-
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                        {selected && (
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => openBrowser({ ...cat, key: categoryKey })}
+                                                        disabled={isAddingComponent}
+                                                        className="gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Add
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {items.map((item, idx) => (
+                                                        <div
+                                                            key={item.buildComponentId ?? item.id}
+                                                            className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full"
+                                                        >
+                                                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                                                                <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                                            </div>
+                                                            <div className="min-w-0 w-full overflow-hidden">
+                                                                {idx === 0 && (
+                                                                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
+                                                                        {cat.label}
+                                                                    </p>
+                                                                )}
+                                                                <div className="flex items-center gap-2 min-w-0 mt-0.5">
+                                                                    <img
+                                                                        src={item.imageUrl}
+                                                                        alt={item.name}
+                                                                        className="w-5 h-5 rounded object-cover bg-muted shrink-0"
+                                                                    />
+                                                                    <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
+                                                                        {item.name}
+                                                                    </h4>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
+                                                                {item.price ? `$${item.price}` : 'N/A'}
+                                                            </span>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                onClick={() => removeSelection(categoryKey)}
+                                                                onClick={() => removeSelection(categoryKey, item.id)}
                                                                 className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive shrink-0"
                                                                 disabled={isAddingComponent}
                                                             >
                                                                 <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                                             </Button>
-                                                        )}
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex justify-end">
                                                         <Button
-                                                            variant={selected ? "outline" : "default"}
+                                                            variant="outline"
                                                             size="sm"
                                                             onClick={() => openBrowser({ ...cat, key: categoryKey })}
                                                             disabled={isAddingComponent}
-                                                            className={selected
-                                                                ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3 shrink-0"
-                                                                : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
-                                                            }
+                                                            className="border-border text-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3"
                                                         >
-                                                            {selected ? "Change" : (<><Plus className="w-3 h-3" /> Select</>)}
+                                                            <Plus className="w-3 h-3" /> Add {cat.label}
                                                         </Button>
                                                     </div>
-                                                </div>
-                                            </Card>
-                                        )
-                                    })}
-                                </div>
+                                                </>
+                                            )}
+                                        </Card>
+                                    )
+                                }
 
-                                <div className="space-y-4">
-                                    <BuildSummary selections={selections} />
-                                    <BuildTips
-                                        selections={selections}
-                                        compatibilityErrors={compatibilityErrors}
-                                    />
-                                </div>
-                            </div>
-                        </TabsContent>
+                                const selected = items[0] as ApiComponent | undefined;
 
-                        <TabsContent value="ai">
-                            <div className="grid lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2">
-                                    <AIBuildPanel onApplyBuild={setSelections} />
-                                </div>
-                                <div className="space-y-4">
-                                    <BuildSummary selections={selections} />
-                                    <BuildTips
-                                        selections={selections}
-                                        compatibilityErrors={compatibilityErrors}
-                                    />
-                                </div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
+                                return (
+                                    <Card
+                                        key={cat.key}
+                                        className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
+                                            }`}
+                                    >
+                                        <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
+                                                }`}>
+                                                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                            </div>
+
+                                            <div className="min-w-0 w-full overflow-hidden">
+                                                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-semibold truncate">
+                                                    {cat.label}
+                                                </p>
+                                                {selected ? (
+                                                    <div className="flex items-center gap-2 min-w-0 mt-0.5">
+                                                        <img
+                                                            src={selected.imageUrl}
+                                                            alt={selected.name}
+                                                            className="w-5 h-5 rounded object-cover bg-muted shrink-0"
+                                                        />
+                                                        <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
+                                                            {selected.name}
+                                                        </h4>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
+                                                        Not selected
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {selected && (
+                                                <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
+                                                    {selected.price ? `$${selected.price}` : 'N/A'}
+                                                </span>
+                                            )}
+
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                {selected && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeSelection(categoryKey)}
+                                                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                                        disabled={isAddingComponent}
+                                                    >
+                                                        <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant={selected ? "outline" : "default"}
+                                                    size="sm"
+                                                    onClick={() => openBrowser({ ...cat, key: categoryKey })}
+                                                    disabled={isAddingComponent}
+                                                    className={selected
+                                                        ? "border-border text-foreground h-7 sm:h-8 text-xs px-2 sm:px-3 shrink-0"
+                                                        : "gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
+                                                    }
+                                                >
+                                                    {selected ? "Change" : (<><Plus className="w-3 h-3" /> Select</>)}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+
+                        <div className="space-y-4">
+                            <BuildSummary selections={selections} />
+                            <BuildTips
+                                selections={selections}
+                                compatibilityErrors={compatibilityErrors}
+                            />
+                        </div>
+                    </div>
                 </div>
             </main>
+
+            <AIBuildModal
+                open={showAIBuildModal}
+                onOpenChange={setShowAIBuildModal}
+                onGenerateBuild={handleGenerateAIBuild}
+                isLoading={isAILoading}
+            />
 
             {activeCategory && (
                 <ComponentBrowser
                     open={browserOpen}
                     onOpenChange={setBrowserOpen}
                     category={activeCategory}
-                    selectedId={selections[activeCategory.key]?.id}
+                    selectedId={isMultiSlot(activeCategory.key) ? undefined : (selections[activeCategory.key] as ApiComponent | null)?.id}
                     onSelect={handleSelect}
                 />
             )}
