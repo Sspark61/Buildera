@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, Grid3X3, List, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,14 +43,28 @@ const PRICE_MIN = 0;
 const PRICE_MAX = 2500;
 
 const Marketplace = () => {
+    const [searchParams] = useSearchParams();
+    const initialPage = parseInt(searchParams.get('page') || '1', 10);
+    
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
+    const [page, setPage] = useState(initialPage);
     const [view, setView] = useState<ViewMode>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [sort, setSort] = useState<string>("none");
 
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
+
+    // Reset page to 1 when any filter changes
+    useEffect(() => {
+        setPage(1);
+    }, [search, selectedCategories, priceRange, sort]);
+
+    // Sync page state with URL search params (for back navigation)
+    useEffect(() => {
+        const pageParam = parseInt(searchParams.get('page') || '1', 10);
+        setPage(pageParam);
+    }, [searchParams]);
 
     const toggle = (list: string[], value: string, setter: (v: string[]) => void) => {
         setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -279,7 +293,7 @@ const Marketplace = () => {
                                 transition={{ delay: i * 0.04 }}
                                 className="min-w-0 w-full" // Force the grid item container to respect the column track size
                             >
-                                <Link to={`/marketplace/${product.id}`} className="block w-full">
+                                <Link to={`/marketplace/${product.id}`} state={{ fromMarketplacePage: page }} className="block w-full">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full h-full flex flex-col -p-1">
                                         <div className="absolute top-2 right-2 z-10">
                                             <FavoriteButton componentId={product.id} />
@@ -327,7 +341,7 @@ const Marketplace = () => {
                                 transition={{ delay: i * 0.03 }}
                                 className="w-full"
                             >
-                                <Link to={`/marketplace/${product.id}`} className="block w-full">
+                                <Link to={`/marketplace/${product.id}`} state={{ fromMarketplacePage: page }} className="block w-full">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full">
                                         <div className="absolute top-3 right-3 z-10">
                                             <FavoriteButton componentId={product.id} />

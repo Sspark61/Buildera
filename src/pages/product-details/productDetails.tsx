@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Check, Plus, TrendingUp, ShoppingBag, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -354,7 +354,19 @@ const ProductDetail = () => {
     const { id } = useParams()
     const { data, isLoading, error } = useGetComponentDetails(Number(id))
     const navigate = useNavigate();
+    const location = useLocation();
     const product = data?.data
+    const fromMarketplacePage = (location.state as any)?.fromMarketplacePage;
+
+    const handleBackClick = () => {
+        // If we came from marketplace with a page number, restore it
+        if (fromMarketplacePage) {
+            navigate(`/marketplace?page=${fromMarketplacePage}`);
+        } else {
+            // Otherwise try to go back in browser history
+            navigate(-1);
+        }
+    };
 
     if (isLoading) return (
         <div className="p-6 lg:p-10 flex items-center justify-center min-h-screen">
@@ -368,10 +380,8 @@ const ProductDetail = () => {
                 Something went wrong
             </h1>
             <p className="text-muted-foreground mb-6">Failed to load product details.</p>
-            <Button asChild>
-                <Link to="/marketplace">
-                    <ArrowLeft className="w-4 h-4" /> Back to Marketplace
-                </Link>
+            <Button variant="ghost" onClick={handleBackClick} className="text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="w-4 h-4" /> Back to Marketplace
             </Button>
         </div>
     )
@@ -384,10 +394,8 @@ const ProductDetail = () => {
             <p className="text-muted-foreground mb-6">
                 We couldn't find the product you're looking for.
             </p>
-            <Button asChild>
-                <Link to="/marketplace">
-                    <ArrowLeft className="w-4 h-4" /> Back to Marketplace
-                </Link>
+            <Button variant="ghost" onClick={handleBackClick} className="text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="w-4 h-4" /> Back to Marketplace
             </Button>
         </div>
     )
@@ -398,12 +406,10 @@ const ProductDetail = () => {
                 <Button
                     variant="ghost"
                     size="sm"
-                    asChild
+                    onClick={handleBackClick}
                     className="mb-6 text-muted-foreground hover:text-foreground"
                 >
-                    <Link to="/marketplace">
-                        <ArrowLeft className="w-4 h-4" /> Marketplace
-                    </Link>
+                    <ArrowLeft className="w-4 h-4" /> Marketplace
                 </Button>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
