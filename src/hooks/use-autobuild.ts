@@ -1,30 +1,20 @@
 import { useMutation } from "@tanstack/react-query";
 
-/**
- * Shape of the request expected by your solo AI host
- */
 export interface AIBuildRequest {
     prompt: string;
-    budget: number | null;
+    budget: number;
     locked_in_build: Record<string, number | number[]>;
     allow_upgrade: boolean;
 }
 
-/**
- * Shape of the response returned by your solo AI host
- */
 export interface AIBuildResponse {
     model_message: string;
     build_ids: Record<string, number | number[]>;
     succeeded: boolean;
 }
 
-const AI_HOST_URL = import.meta.env.VITE_AI_HOST_URL || "https://your-ai-host.com/generate-build";
+const AI_HOST_URL = import.meta.env.VITE_AI_HOST_URL || "https://topflight-donnette-bitterly.ngrok-free.dev/build";
 
-/**
- * Hook to interact with the AI Model Host.
- * Set VITE_AI_HOST_URL in your .env to point at the real endpoint.
- */
 export const useGenerateAIBuild = () => {
     return useMutation({
         mutationFn: async (data: AIBuildRequest): Promise<AIBuildResponse> => {

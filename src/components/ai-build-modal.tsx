@@ -23,7 +23,7 @@ const EXAMPLE_PROMPTS = [
 
 export interface AIBuildFormValues {
     prompt: string;
-    budget: number | null;
+    budget: number;
     allowUpgrade: boolean;
 }
 
@@ -32,9 +32,10 @@ interface AIBuildModalProps {
     onOpenChange: (open: boolean) => void;
     onGenerateBuild: (values: AIBuildFormValues) => Promise<void> | void;
     isLoading: boolean;
+    loadingPhase?: 'generating' | 'finalizing';
 }
 
-export const AIBuildModal = ({ open, onOpenChange, onGenerateBuild, isLoading }: AIBuildModalProps) => {
+export const AIBuildModal = ({ open, onOpenChange, onGenerateBuild, isLoading, loadingPhase }: AIBuildModalProps) => {
     const [prompt, setPrompt] = useState("");
     const [budget, setBudget] = useState("");
     const [allowUpgrade, setAllowUpgrade] = useState(false);
@@ -42,7 +43,7 @@ export const AIBuildModal = ({ open, onOpenChange, onGenerateBuild, isLoading }:
     const handleSubmit = async () => {
         await onGenerateBuild({
             prompt,
-            budget: budget.trim() !== "" ? Number(budget) : null,
+            budget: Number(budget),
             allowUpgrade,
         });
     };
@@ -71,13 +72,13 @@ export const AIBuildModal = ({ open, onOpenChange, onGenerateBuild, isLoading }:
                             onChange={(e) => setPrompt(e.target.value)}
                             maxLength={500}
                             disabled={isLoading}
-                            className="min-h-[100px] bg-muted/30 border-border text-sm resize-none"
+                            className="min-h-25 bg-muted/30 border-border text-sm resize-none"
                         />
                         <p className="text-[10px] text-muted-foreground text-right">{prompt.length}/500</p>
                     </div>
 
                     <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Budget (USD, optional)</Label>
+                        <Label className="text-xs text-muted-foreground">Budget (USD)</Label>
                         <Input
                             type="number"
                             placeholder="e.g. 1500"
@@ -127,12 +128,13 @@ export const AIBuildModal = ({ open, onOpenChange, onGenerateBuild, isLoading }:
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isLoading || prompt.trim() === ""}
+                        disabled={isLoading || prompt.trim() === "" || budget.trim() === ""}
                         className="gradient-primary text-primary-foreground gap-1.5"
                     >
                         {isLoading ? (
                             <>
-                                <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                {loadingPhase === 'finalizing' ? 'Finalizing build...' : 'Generating...'}
                             </>
                         ) : (
                             <>

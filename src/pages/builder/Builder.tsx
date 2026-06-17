@@ -32,7 +32,7 @@ import {
     useDeleteBuild,
 } from "@/hooks/use-builds";
 import { useGenerateAIBuild, type AIBuildRequest, type AIBuildResponse } from "@/hooks/use-autobuild";
-import { AIBuildModal } from "@/components/ai-build-modal";
+import { AIBuildModal, type AIBuildFormValues } from "@/components/ai-build-modal";
 import { api } from "@/api/api";
 
 // ---- Types ----
@@ -345,7 +345,7 @@ const BuildSummary = ({
                     />
                 </div>
             </div>
-            <div className="space-y-1.5 mb-3 max-h-48 overflow-y-auto">
+            <div className="space-y-1.5 mb-3">
                 {rows.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic">No components selected yet.</p>
                 ) : rows.map((row) => (
@@ -367,12 +367,17 @@ const BuildSummary = ({
 
 // ---- BuildTips ----
 const BuildTips = ({
-    selections, compatibilityErrors,
+    selections, compatibilityErrors, aiMessage,
 }: {
     selections: Selections
     compatibilityErrors: CompatibilityError[]
+    aiMessage?: string
 }) => {
-    const tips: { type: "warn" | "ok" | "info" | "fix"; text: string }[] = []
+    const tips: { type: "warn" | "ok" | "info" | "fix" | "ai"; text: string }[] = []
+
+    if (aiMessage) {
+        tips.push({ type: "ai", text: aiMessage })
+    }
 
     compatibilityErrors.forEach(err => {
         tips.push({
@@ -422,7 +427,9 @@ const BuildTips = ({
                             ? CheckCircle2
                             : tip.type === "fix"
                                 ? Wrench
-                                : Lightbulb
+                                : tip.type === "ai"
+                                    ? Sparkles
+                                    : Lightbulb
 
                     const color = tip.type === "warn"
                         ? "text-destructive"
@@ -430,16 +437,24 @@ const BuildTips = ({
                             ? "text-primary"
                             : tip.type === "fix"
                                 ? "text-sky-500 dark:text-sky-400"
-                                : "text-muted-foreground"
+                                : tip.type === "ai"
+                                    ? "text-primary"
+                                    : "text-muted-foreground"
 
                     return (
-                        <div key={i} className="flex gap-2.5 items-start border-b border-border/40 last:border-none pb-2.5 last:pb-0">
+                        <div
+                            key={i}
+                            className="flex gap-2.5 items-start border-b border-border/40 last:border-none pb-2.5 last:pb-0"
+                        >
                             <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${color}`} />
                             <div className="flex-1">
-                                <p className={`text-xs leading-relaxed ${tip.type === "fix"
-                                    ? "text-muted-foreground font-sans font-normal"
-                                    : "text-foreground font-medium"
-                                    }`}>
+                                <p className={`text-xs leading-relaxed ${
+                                    tip.type === "fix"
+                                        ? "text-muted-foreground font-sans font-normal"
+                                        : tip.type === "ai"
+                                            ? "text-foreground/90 font-normal"
+                                            : "text-foreground font-medium"
+                                }`}>
                                     {tip.type === "fix" && <span className="font-semibold text-foreground/80 mr-1">Fix:</span>}
                                     {tip.text}
                                 </p>
@@ -497,6 +512,10 @@ const Builder = () => {
     const [isAddingComponent, setIsAddingComponent] = useState(false)
     const [isLocalSaving, setIsLocalSaving] = useState(false)
     const [compatibilityErrors, setCompatibilityErrors] = useState<CompatibilityError[]>([])
+    const [incompatibleKeys, setIncompatibleKeys] = useState<Set<string>>(new Set())
+    const [aiAppliedKeys, setAiAppliedKeys] = useState<Set<string>>(new Set())
+    const [aiMessage, setAiMessage] = useState<string>("")
+    const [isFinalizingBuild, setIsFinalizingBuild] = useState(false)
     const [seeded, setSeeded] = useState(false)
     const [showDeleteDialog, setShowDeleteDialog] = useState(false)
     const [showAIBuildModal, setShowAIBuildModal] = useState(false)
@@ -584,6 +603,8 @@ const Builder = () => {
 
         setIsAddingComponent(true)
         setCompatibilityErrors([])
+        setAiAppliedKeys(prev => { const n = new Set(prev); n.delete(targetKey); return n })
+        setAiMessage("")
 
         let currentBuildId = activeBuildId;
         const existing = multi ? null : (selections[targetKey] as ApiComponent | null)
@@ -625,14 +646,31 @@ const Builder = () => {
             }
 
             // Step 3: Add new component
-            await api(`/builds/${currentBuildId}/components`, {
+            const addResponse: any = await api(`/builds/${currentBuildId}/components`, {
                 method: 'POST',
                 body: JSON.stringify({ componentId: component.id }),
             })
 
             // Step 4: Complete Success Handler
             await syncBuildSelections(currentBuildId!, setSelections)
-            setCompatibilityErrors([])
+
+            if (addResponse?.message) {
+                toast.success(addResponse.message)
+            }
+
+            const compatibility = addResponse?.compatibility
+            const issues: CompatibilityError[] = [
+                ...(compatibility?.errors ?? []),
+                ...(compatibility?.warnings ?? []),
+            ]
+
+            if (compatibility && !compatibility.isCompatible) {
+                setCompatibilityErrors(issues)
+                setIncompatibleKeys(prev => new Set([...prev, targetKey]))
+            } else {
+                setCompatibilityErrors([])
+                setIncompatibleKeys(new Set())
+            }
 
         } catch (err: any) {
             console.error("Caught rich validation error:", err);
@@ -703,6 +741,8 @@ const Builder = () => {
         }
 
         setCompatibilityErrors([])
+        setIncompatibleKeys(prev => { const n = new Set(prev); n.delete(key); return n })
+        setAiAppliedKeys(prev => { const n = new Set(prev); n.delete(key); return n })
     }
 
     const handleNewBuild = () => {
@@ -712,6 +752,9 @@ const Builder = () => {
         setBudget("")
         setActiveBuildId(null)
         setCompatibilityErrors([])
+        setIncompatibleKeys(new Set())
+        setAiAppliedKeys(new Set())
+        setAiMessage("")
         setSeeded(false)
     }
 
@@ -723,7 +766,7 @@ const Builder = () => {
         })
     }
 
-    const handleGenerateAIBuild = async (form: { prompt: string; budget: number | null; allowUpgrade: boolean }) => {
+    const handleGenerateAIBuild = async (form: AIBuildFormValues) => {
         const lockedInBuild: Record<string, number | number[]> = {}
         componentCategories.forEach((cat) => {
             const items = getItems(selections, cat.key)
@@ -740,7 +783,12 @@ const Builder = () => {
 
         generateAIBuild(request, {
             onSuccess: async (response) => {
-                await applyAIBuildResponse(response, form.allowUpgrade)
+                setIsFinalizingBuild(true)
+                try {
+                    await applyAIBuildResponse(response, form.allowUpgrade)
+                } finally {
+                    setIsFinalizingBuild(false)
+                }
             },
             onError: (err: any) => {
                 toast.error(err?.message || "Failed to generate AI build")
@@ -789,6 +837,8 @@ const Builder = () => {
                 setActiveBuildId(currentBuildId)
             }
 
+            const writtenKeys = new Set<string>()
+
             for (const cat of componentCategories) {
                 const fetched = fetchedByCategory[cat.key]
                 if (!fetched) continue
@@ -806,6 +856,7 @@ const Builder = () => {
                                 body: JSON.stringify({ componentId: item.id }),
                             })
                         }
+                        writtenKeys.add(cat.key)
                     } else if (existingItems.length === 0) {
                         for (const item of fetched) {
                             await api(`/builds/${currentBuildId}/components`, {
@@ -813,6 +864,7 @@ const Builder = () => {
                                 body: JSON.stringify({ componentId: item.id }),
                             })
                         }
+                        writtenKeys.add(cat.key)
                     }
                 } else {
                     if (allowUpgrade || existingItems.length === 0) {
@@ -823,13 +875,16 @@ const Builder = () => {
                             method: 'POST',
                             body: JSON.stringify({ componentId: fetched[0].id }),
                         })
+                        writtenKeys.add(cat.key)
                     }
                 }
             }
 
             await syncBuildSelections(currentBuildId!, setSelections)
             setCompatibilityErrors([])
-            toast.success(response.model_message || "AI build applied")
+            setIncompatibleKeys(new Set())
+            setAiAppliedKeys(writtenKeys)
+            setAiMessage(response.model_message || "")
             setShowAIBuildModal(false)
         } catch (err: any) {
             console.error("Failed to apply AI build:", err)
@@ -849,8 +904,8 @@ const Builder = () => {
     }
 
     return (
-        <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-background text-foreground pb-16 md:pb-0">
-            <header className="p-4 lg:p-6 border-b border-border shrink-0 bg-background/95 backdrop-blur">
+        <div className="w-full flex flex-col bg-background text-foreground pb-16 md:pb-0">
+            <header className="sticky top-0 z-10 p-4 lg:p-6 border-b border-border bg-background/95 backdrop-blur">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1 min-w-0 space-y-2">
                         <Input
@@ -909,7 +964,7 @@ const Builder = () => {
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto min-h-0 p-4 lg:p-6 bg-background">
+            <main className="p-4 lg:p-6 bg-background">
                 <div className="max-w-7xl mx-auto space-y-6">
                     <div className="grid lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 space-y-3">
@@ -939,14 +994,23 @@ const Builder = () => {
                                 const Icon = iconMap[categoryKey] || Box;
 
                                 if (multi) {
+                                    const hasError = incompatibleKeys.has(categoryKey)
+                                    const isAI = !hasError && aiAppliedKeys.has(categoryKey)
                                     return (
                                         <Card
                                             key={cat.key}
-                                            className={`p-3 sm:p-4 border transition-all overflow-hidden space-y-2.5 ${items.length > 0 ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
-                                                }`}
+                                            className={`p-3 sm:p-4 border transition-all overflow-hidden space-y-2.5 ${
+                                                hasError
+                                                    ? "bg-card border-destructive/70"
+                                                    : isAI
+                                                        ? "bg-card border-primary/60 shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
+                                                        : items.length > 0
+                                                            ? "bg-card border-border"
+                                                            : "bg-card/50 border-dashed border-border/60"
+                                            }`}
                                         >
                                             {items.length === 0 ? (
-                                                <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:gap-3 w-full">
+                                                <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
                                                     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 bg-muted/50">
                                                         <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                                                     </div>
@@ -964,7 +1028,7 @@ const Builder = () => {
                                                         disabled={isAddingComponent}
                                                         className="gradient-primary text-primary-foreground h-7 sm:h-8 gap-1 text-xs px-2 sm:px-3 shrink-0"
                                                     >
-                                                        <Plus className="w-3 h-3" /> Add
+                                                        <Plus className="w-3 h-3" /> Select
                                                     </Button>
                                                 </div>
                                             ) : (
@@ -1026,12 +1090,21 @@ const Builder = () => {
                                 }
 
                                 const selected = items[0] as ApiComponent | undefined;
+                                const hasError = incompatibleKeys.has(categoryKey)
+                                const isAI = !hasError && aiAppliedKeys.has(categoryKey)
 
                                 return (
                                     <Card
                                         key={cat.key}
-                                        className={`p-3 sm:p-4 border transition-all overflow-hidden ${selected ? "bg-card border-border" : "bg-card/50 border-dashed border-border/60"
-                                            }`}
+                                        className={`p-3 sm:p-4 border transition-all overflow-hidden ${
+                                            hasError
+                                                ? "bg-card border-destructive/70"
+                                                : isAI
+                                                    ? "bg-card border-primary/60 shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
+                                                    : selected
+                                                        ? "bg-card border-border"
+                                                        : "bg-card/50 border-dashed border-border/60"
+                                        }`}
                                     >
                                         <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 sm:gap-3 w-full">
                                             <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${selected ? "bg-primary/10" : "bg-muted/50"
@@ -1103,6 +1176,7 @@ const Builder = () => {
                             <BuildTips
                                 selections={selections}
                                 compatibilityErrors={compatibilityErrors}
+                                aiMessage={aiMessage}
                             />
                         </div>
                     </div>
@@ -1113,7 +1187,8 @@ const Builder = () => {
                 open={showAIBuildModal}
                 onOpenChange={setShowAIBuildModal}
                 onGenerateBuild={handleGenerateAIBuild}
-                isLoading={isAILoading}
+                isLoading={isAILoading || isFinalizingBuild}
+                loadingPhase={isAILoading ? 'generating' : 'finalizing'}
             />
 
             {activeCategory && (
