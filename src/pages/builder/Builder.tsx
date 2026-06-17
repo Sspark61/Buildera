@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from "sonner";
 import {
@@ -134,6 +134,55 @@ const buildSelectionsFromComponents = (components: any[]): Selections => {
         }
     })
     return mapped
+}
+
+const IMAGE_ANIM_MS = 220
+
+// ---- AnimatedComponentImage ----
+const AnimatedComponentImage = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+    const [visible, setVisible] = useState(false)
+
+    useLayoutEffect(() => {
+        setVisible(false)
+        const id = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
+        return () => cancelAnimationFrame(id)
+    }, [src])
+
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className={`${className} transition-all ease-out`}
+            style={{
+                transitionDuration: `${IMAGE_ANIM_MS}ms`,
+                opacity: visible ? 1 : 0,
+                transform: visible ? 'translateX(0)' : 'translateX(-8px)',
+            }}
+        />
+    )
+}
+
+
+// ---- TypewriterText ----
+const TypewriterText = ({ text, className, startDelay = 0 }: { text: string; className?: string; startDelay?: number }) => {
+    const [displayed, setDisplayed] = useState("")
+
+    useEffect(() => {
+        setDisplayed("")
+        let interval: ReturnType<typeof setInterval>
+        const timer = setTimeout(() => {
+            let i = 0
+            const charDelay = Math.max(8, Math.floor(320 / text.length))
+            interval = setInterval(() => {
+                i++
+                setDisplayed(text.slice(0, i))
+                if (i >= text.length) clearInterval(interval)
+            }, charDelay)
+        }, startDelay)
+        return () => { clearTimeout(timer); clearInterval(interval) }
+    }, [text, startDelay])
+
+    return <span className={className}>{displayed || " "}</span>
 }
 
 // ---- ComponentBrowser ----
@@ -755,7 +804,7 @@ const Builder = () => {
         setIncompatibleKeys(new Set())
         setAiAppliedKeys(new Set())
         setAiMessage("")
-        setSeeded(false)
+        navigate('/builder', { replace: true })
     }
 
     const handleDelete = () => {
@@ -1048,14 +1097,17 @@ const Builder = () => {
                                                                     </p>
                                                                 )}
                                                                 <div className="flex items-center gap-2 min-w-0 mt-0.5">
-                                                                    <img
+                                                                    <AnimatedComponentImage
                                                                         src={item.imageUrl}
                                                                         alt={item.name}
                                                                         className="w-5 h-5 rounded object-cover bg-muted shrink-0"
                                                                     />
-                                                                    <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
-                                                                        {item.name}
-                                                                    </h4>
+                                                                    <TypewriterText
+                                                                        key={item.id}
+                                                                        text={item.name}
+                                                                        startDelay={IMAGE_ANIM_MS}
+                                                                        className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1"
+                                                                    />
                                                                 </div>
                                                             </div>
                                                             <span className="text-xs sm:text-sm font-heading font-bold gradient-text shrink-0 px-1">
@@ -1118,14 +1170,17 @@ const Builder = () => {
                                                 </p>
                                                 {selected ? (
                                                     <div className="flex items-center gap-2 min-w-0 mt-0.5">
-                                                        <img
+                                                        <AnimatedComponentImage
                                                             src={selected.imageUrl}
                                                             alt={selected.name}
                                                             className="w-5 h-5 rounded object-cover bg-muted shrink-0"
                                                         />
-                                                        <h4 className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1">
-                                                            {selected.name}
-                                                        </h4>
+                                                        <TypewriterText
+                                                            key={selected.id}
+                                                            text={selected.name}
+                                                            startDelay={IMAGE_ANIM_MS}
+                                                            className="text-xs sm:text-sm font-heading font-semibold text-foreground truncate min-w-0 flex-1"
+                                                        />
                                                     </div>
                                                 ) : (
                                                     <p className="text-xs sm:text-sm text-muted-foreground/40 italic mt-0.5 truncate">
