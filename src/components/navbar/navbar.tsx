@@ -15,6 +15,7 @@ import {
     SidebarMenuButton,
     SidebarHeader,
     SidebarFooter,
+    SidebarTrigger,
     useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -51,10 +52,11 @@ export function AppSidebar() {
     return (
         <Sidebar collapsible="icon">
             <SidebarHeader>
-                <Link
-                    to="/"
-                    className={`flex items-center gap-2.5 py-2 ${collapsed ? "justify-center px-0" : "px-2"}`}
-                >
+                <div className={`flex items-center gap-1 py-1 ${collapsed ? "flex-col justify-center" : "flex-row justify-between px-1"}`}>
+                    <Link
+                        to="/"
+                        className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
+                    >
                     {!collapsed && (
                         <img
                             src={theme === 'dark' ? builderaLogo : builderalight}
@@ -71,7 +73,9 @@ export function AppSidebar() {
                     )}
 
 
-                </Link>
+                    </Link>
+                    <SidebarTrigger className="shrink-0" />
+                </div>
             </SidebarHeader>
 
             <SidebarContent>

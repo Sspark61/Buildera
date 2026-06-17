@@ -43,47 +43,113 @@ const PRICE_MIN = 0;
 const PRICE_MAX = 2500;
 
 const Marketplace = () => {
-    const [searchParams] = useSearchParams();
-    const initialPage = parseInt(searchParams.get('page') || '1', 10);
-    
-    const [search, setSearch] = useState("");
-    const [page, setPage] = useState(initialPage);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Derive all filter state from URL so back-navigation restores them
+    const urlSearch = searchParams.get('q') || '';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const sort = searchParams.get('sort') || 'none';
+    const selectedCategories = searchParams.getAll('type');
+    const urlMinPrice = parseInt(searchParams.get('minPrice') || String(PRICE_MIN), 10);
+    const urlMaxPrice = parseInt(searchParams.get('maxPrice') || String(PRICE_MAX), 10);
+
+    // Local UI-only state (not needed for back-nav)
     const [view, setView] = useState<ViewMode>("grid");
     const [filtersOpen, setFiltersOpen] = useState(false);
-    const [sort, setSort] = useState<string>("none");
 
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [priceRange, setPriceRange] = useState<[number, number]>([PRICE_MIN, PRICE_MAX]);
+    // Search input with debounce to avoid rapid URL churn
+    const [searchInput, setSearchInput] = useState(urlSearch);
 
-    // Reset page to 1 when any filter changes
     useEffect(() => {
-        setPage(1);
-    }, [search, selectedCategories, priceRange, sort]);
+        const t = setTimeout(() => {
+            setSearchParams(prev => {
+                const next = new URLSearchParams(prev);
+                const current = prev.get('q') || '';
+                const incoming = searchInput.trim();
+                if (incoming === current) return prev; // nothing changed, don't touch the URL
+                if (incoming) {
+                    next.set('q', incoming);
+                } else {
+                    next.delete('q');
+                }
+                next.set('page', '1');
+                return next;
+            }, { replace: true });
+        }, 400);
+        return () => clearTimeout(t);
+    }, [searchInput]);
 
-    // Sync page state with URL search params (for back navigation)
+    // Scroll to top whenever the page number changes
     useEffect(() => {
-        const pageParam = parseInt(searchParams.get('page') || '1', 10);
-        setPage(pageParam);
-    }, [searchParams]);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }, [page]);
 
-    const toggle = (list: string[], value: string, setter: (v: string[]) => void) => {
-        setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+    // Slider local state — committed to URL only on pointer release
+    const [sliderRange, setSliderRange] = useState<[number, number]>([urlMinPrice, urlMaxPrice]);
+
+    // Keep slider in sync if URL changes externally (e.g. reset)
+    useEffect(() => {
+        setSliderRange([urlMinPrice, urlMaxPrice]);
+    }, [urlMinPrice, urlMaxPrice]);
+
+    const updateParams = (
+        updates: Record<string, string | string[] | null>,
+        resetPage = true
+    ) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (resetPage) next.set('page', '1');
+            for (const [key, value] of Object.entries(updates)) {
+                next.delete(key);
+                if (value !== null && value !== '' && value !== 'none') {
+                    if (Array.isArray(value)) {
+                        value.forEach(v => next.append(key, v));
+                    } else {
+                        next.set(key, value);
+                    }
+                }
+            }
+            return next;
+        }, { replace: true });
+    };
+
+    const setPage = (p: number) => updateParams({ page: String(p) }, false);
+    const setSort = (value: string) => updateParams({ sort: value !== 'none' ? value : null });
+
+    const toggleCategory = (cat: string) => {
+        const next = selectedCategories.includes(cat)
+            ? selectedCategories.filter(c => c !== cat)
+            : [...selectedCategories, cat];
+        updateParams({ type: next.length ? next : null });
+    };
+
+    const commitPriceRange = (range: [number, number]) => {
+        updateParams({
+            minPrice: range[0] !== PRICE_MIN ? String(range[0]) : null,
+            maxPrice: range[1] !== PRICE_MAX ? String(range[1]) : null,
+        });
     };
 
     const resetFilters = () => {
-        setSelectedCategories([]);
-        setPriceRange([PRICE_MIN, PRICE_MAX]);
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('type');
+            next.delete('minPrice');
+            next.delete('maxPrice');
+            next.set('page', '1');
+            return next;
+        }, { replace: true });
     };
 
     const activeFilterCount =
         selectedCategories.length +
-        (priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX ? 1 : 0);
+        (urlMinPrice !== PRICE_MIN || urlMaxPrice !== PRICE_MAX ? 1 : 0);
 
     const { data, isLoading, error } = useGetComponents({
-        search,
+        search: urlSearch || undefined,
         type: selectedCategories[0],
-        minPrice: priceRange[0] === PRICE_MIN ? undefined : priceRange[0],
-        maxPrice: priceRange[1] === PRICE_MAX ? undefined : priceRange[1],
+        minPrice: urlMinPrice !== PRICE_MIN ? urlMinPrice : undefined,
+        maxPrice: urlMaxPrice !== PRICE_MAX ? urlMaxPrice : undefined,
         page,
         limit: 20,
         sortBy: sort !== "none" ? "price" : undefined,
@@ -93,7 +159,7 @@ const Marketplace = () => {
     const products = data?.data.components ?? [];
 
     return (
-        <div className="p-4 lg:p-8 max-w-full overflow-x-hidden"> {/* Added overflow safety guard */}
+        <div className="p-4 lg:p-8 max-w-full overflow-x-hidden">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="flex items-center justify-between mb-6">
                     <div>
@@ -129,8 +195,8 @@ const Marketplace = () => {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             placeholder="Search by name or brand..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             className="pl-10 bg-muted/50 border-border h-10"
                         />
                     </div>
@@ -146,7 +212,7 @@ const Marketplace = () => {
                                 )}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[320px] sm:w-[380px] p-0">
+                        <PopoverContent align="end" className="w-[320px] sm:w-95 p-0">
                             <div className="flex items-center justify-between px-4 py-3">
                                 <h3 className="text-sm font-heading font-semibold text-foreground">Filters</h3>
                                 <Button
@@ -168,15 +234,16 @@ const Marketplace = () => {
                                                 Price range
                                             </Label>
                                             <span className="text-xs text-foreground font-medium">
-                                                ${priceRange[0]} – ${priceRange[1]}
+                                                ${sliderRange[0]} – ${sliderRange[1]}
                                             </span>
                                         </div>
                                         <Slider
                                             min={PRICE_MIN}
                                             max={PRICE_MAX}
                                             step={50}
-                                            value={priceRange}
-                                            onValueChange={(v) => setPriceRange([v[0], v[1]] as [number, number])}
+                                            value={sliderRange}
+                                            onValueChange={(v) => setSliderRange([v[0], v[1]] as [number, number])}
+                                            onValueCommit={(v) => commitPriceRange([v[0], v[1]] as [number, number])}
                                         />
                                     </div>
                                     <Separator />
@@ -213,9 +280,7 @@ const Marketplace = () => {
                                                         <Checkbox
                                                             id={id}
                                                             checked={checked}
-                                                            onCheckedChange={() =>
-                                                                toggle(selectedCategories, cat, setSelectedCategories)
-                                                            }
+                                                            onCheckedChange={() => toggleCategory(cat)}
                                                         />
                                                         <span className="truncate">{cat}</span>
                                                     </label>
@@ -245,18 +310,18 @@ const Marketplace = () => {
                                 key={`c-${c}`}
                                 variant="secondary"
                                 className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                                onClick={() => toggle(selectedCategories, c, setSelectedCategories)}
+                                onClick={() => toggleCategory(c)}
                             >
                                 {c} <X className="w-3 h-3" />
                             </Badge>
                         ))}
-                        {(priceRange[0] !== PRICE_MIN || priceRange[1] !== PRICE_MAX) && (
+                        {(urlMinPrice !== PRICE_MIN || urlMaxPrice !== PRICE_MAX) && (
                             <Badge
                                 variant="secondary"
                                 className="gap-1 bg-muted text-foreground hover:bg-muted/80 cursor-pointer"
-                                onClick={() => setPriceRange([PRICE_MIN, PRICE_MAX])}
+                                onClick={() => commitPriceRange([PRICE_MIN, PRICE_MAX])}
                             >
-                                ${priceRange[0]} – ${priceRange[1]} <X className="w-3 h-3" />
+                                ${urlMinPrice} – ${urlMaxPrice} <X className="w-3 h-3" />
                             </Badge>
                         )}
                         <button
@@ -291,15 +356,13 @@ const Marketplace = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: i * 0.04 }}
-                                className="min-w-0 w-full" // Force the grid item container to respect the column track size
+                                className="min-w-0 w-full"
                             >
-                                <Link to={`/marketplace/${product.id}`} state={{ fromMarketplacePage: page }} className="block w-full">
+                                <Link to={`/marketplace/${product.id}`} className="block w-full">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full h-full flex flex-col -p-1">
                                         <div className="absolute top-2 right-2 z-10">
                                             <FavoriteButton componentId={product.id} />
                                         </div>
-
-                                        {/* 💡 FIX 2: Wrapped image in an aspect container that can't grow past its column size */}
                                         <div className="aspect-square overflow-hidden bg-muted w-full shrink-0">
                                             <img
                                                 src={product.imageUrl || altImage}
@@ -331,7 +394,6 @@ const Marketplace = () => {
                         ))}
                     </div>
                 ) : (
-                    /* 💡 FIX 3: Added 'w-full' directly to the list container wrapper as well */
                     <div className="flex flex-col gap-3 w-full">
                         {products.map((product, i) => (
                             <motion.div
@@ -341,12 +403,11 @@ const Marketplace = () => {
                                 transition={{ delay: i * 0.03 }}
                                 className="w-full"
                             >
-                                <Link to={`/marketplace/${product.id}`} state={{ fromMarketplacePage: page }} className="block w-full">
+                                <Link to={`/marketplace/${product.id}`} className="block w-full">
                                     <Card className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group cursor-pointer relative w-full">
                                         <div className="absolute top-3 right-3 z-10">
                                             <FavoriteButton componentId={product.id} />
                                         </div>
-
                                         <div className="flex gap-3 sm:gap-4 p-3 min-w-0 items-center w-full">
                                             <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-md overflow-hidden shrink-0 bg-muted">
                                                 <img
@@ -383,7 +444,7 @@ const Marketplace = () => {
                 <div className="flex justify-center gap-2 mt-6">
                     <button
                         disabled={page === 1}
-                        onClick={() => setPage(p => p - 1)}
+                        onClick={() => setPage(page - 1)}
                         className="px-4 py-2 border rounded-md text-sm disabled:opacity-50 text-foreground bg-background"
                     >
                         Previous
@@ -393,7 +454,7 @@ const Marketplace = () => {
                     </span>
                     <button
                         disabled={page === data?.data.pages}
-                        onClick={() => setPage(p => p + 1)}
+                        onClick={() => setPage(page + 1)}
                         className="px-4 py-2 border rounded-md text-sm disabled:opacity-50 text-foreground bg-background"
                     >
                         Next
