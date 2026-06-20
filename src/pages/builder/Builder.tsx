@@ -3,9 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from "sonner";
 import {
     Monitor, Cpu, CircuitBoard, MemoryStick, HardDrive, Zap, Fan, Box,
-    Plus, FileDown, Sparkles, Trash2, Search, Check, Receipt,
+    Plus, FilePlus2, Download, Sparkles, Trash2, Search, Check, Receipt,
     Lightbulb, AlertTriangle, CheckCircle2, Wand2, Wrench,
 } from "lucide-react";
+import builderaLogoLight from "@/assets/images/buildera_logo_whitemode.png";
+import { exportBuildPdf, type BuildPdfRow } from "@/utils/export-build-pdf";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -815,6 +817,40 @@ const Builder = () => {
         })
     }
 
+    const handleExportPdf = async () => {
+        const rows: BuildPdfRow[] = []
+        componentCategories.forEach((cat) => {
+            const items = getItems(selections, cat.key)
+            if (items.length === 0) return
+            // Group identical components (same id) into qty > 1
+            const countMap = new Map<number, { item: typeof items[0]; count: number }>()
+            items.forEach((item) => {
+                const existing = countMap.get(item.id)
+                if (existing) {
+                    existing.count++
+                } else {
+                    countMap.set(item.id, { item, count: 1 })
+                }
+            })
+            countMap.forEach(({ item, count }) => {
+                rows.push({
+                    type: categoryTypeMap[cat.key] ?? cat.label,
+                    name: item.name,
+                    qty: count,
+                    unitPrice: item.price,
+                })
+            })
+        })
+        await exportBuildPdf({
+            buildName,
+            buildPurpose,
+            budget,
+            logoUrl: builderaLogoLight,
+            rows,
+            total: getTotalPrice(selections),
+        })
+    }
+
     const handleGenerateAIBuild = async (form: AIBuildFormValues) => {
         const lockedInBuild: Record<string, number | number[]> = {}
         componentCategories.forEach((cat) => {
@@ -997,7 +1033,16 @@ const Builder = () => {
                         </span>
 
                         <Button variant="outline" size="sm" onClick={handleNewBuild} className="border-border text-muted-foreground gap-1.5">
-                            <FileDown className="w-3.5 h-3.5" /> New
+                            <FilePlus2 className="w-3.5 h-3.5" /> New
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportPdf}
+                            disabled={getItemCount(selections) === 0}
+                            className="border-border text-muted-foreground gap-1.5"
+                        >
+                            <Download className="w-3.5 h-3.5" /> Export PDF
                         </Button>
                         {activeBuildId && (
                             <Button

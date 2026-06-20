@@ -13,7 +13,7 @@ export interface AIBuildResponse {
     succeeded: boolean;
 }
 
-const AI_HOST_URL = import.meta.env.VITE_AI_HOST_URL || "https://topflight-donnette-bitterly.ngrok-free.dev/build";
+const AI_HOST_URL = import.meta.env.VITE_AI_HOST_URL || "https://project-hdtcr.vercel.app/build";
 
 export const useGenerateAIBuild = () => {
     return useMutation({
